@@ -16,3 +16,4 @@ axum = { version = "0.8.4", features = ["ws", "multipart"] }
 utoipa = { version = "5.4.0", features = ["macros"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
 tokio = { version = "1.47.1", features = ["full"] }
+base64 = "0.22.1"

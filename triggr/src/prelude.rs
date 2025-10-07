@@ -3,9 +3,9 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tokio::sync::broadcast::Receiver;
 use std::{string::FromUtf8Error, sync::Arc};
 use thiserror::Error;
+use tokio::sync::broadcast::Receiver;
 
 use crate::{chain::Blockchain, storage::SledStore};
 use utoipa::ToSchema;
@@ -60,6 +60,9 @@ pub static DEFAULT_DB_PATH_APP: &str = "./.data/app";
 /// Default path to database storage for application data.
 pub static DEFAULT_DB_PATH_USERS: &str = "./.data/users";
 
+/// The API key type
+pub type ApiKey = String;
+
 /// The entire state of the database system.
 #[derive(Clone)]
 pub struct Samaritan {
@@ -70,15 +73,13 @@ pub struct Samaritan {
 }
 
 /// Trait for managing **documents** inside collections.
-/// We are using a trait here to decouple the storage layer and make it easily upgradeable and replaceable.
+/// This abstracts how projects are persisted, making the storage
+/// pluggable — e.g. we can back it with `SledStore`, `MemoryStore`,
+/// or even a database like Postgres in the future.
 ///
 /// A document is a JSON-like object identified by a unique `id`.
-/// Trait for managing **documents** inside collections.
 #[async_trait]
-pub trait DocumentStorage<T>: Subscribe<T> + Send + Sync
-where
-    T: Clone + Send + Sync + 'static,
-{
+pub trait DocumentStore {
     /// Return appropriate document key.
     fn key(project_id: &str, collection: &str, doc_id: &str) -> String;
 
@@ -92,12 +93,7 @@ where
     /// # Returns
     /// * `Ok(())` if inserted successfully.
     /// * `Err` if insertion fails (e.g. collection not found).
-    async fn insert(
-        &self,
-        project_id: &str,
-        collection: &str,
-        doc: Document,
-    ) -> StorageResult<()>;
+    async fn insert(&self, project_id: &str, collection: &str, doc: Document) -> StorageResult<()>;
 
     /// Retrieve a document by its ID.
     ///
@@ -122,12 +118,7 @@ where
     /// # Returns
     /// * `Ok(())` if the update succeeds.
     /// * `Err` if the document does not exist or the update fails.
-    async fn update(
-        &self,
-        project_id: &str,
-        collection: &str,
-        doc: Document,
-    ) -> StorageResult<()>;
+    async fn update(&self, project_id: &str, collection: &str, doc: Document) -> StorageResult<()>;
 
     /// Delete a document from a collection by ID.
     ///
@@ -139,12 +130,7 @@ where
     /// # Returns
     /// * `Ok(())` if the document was found and deleted successfully.
     /// * `Err` if deletion fails.
-    async fn delete(
-        &self,
-        project_id: &str,
-        collection: &str,
-        id: &str,
-    ) -> StorageResult<()>;
+    async fn delete(&self, project_id: &str, collection: &str, id: &str) -> StorageResult<()>;
 
     /// List all documents inside a given collection.
     ///
@@ -215,6 +201,21 @@ pub struct WsPayload {
     pub doc: Document,
 }
 
+/// Represents a database project on the network.
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+pub struct Project {
+    /// Project id
+    pub id: String,
+    /// Project owners id
+    pub owner: String,
+    /// The address of the contracts node
+    pub contracts_node_address: String,
+    /// Description
+    pub description: String,
+    /// Location of contract metadata
+    pub contract_file_path: String,
+}
+
 /// The `Subscribe` trait defines a real-time update mechanism for collections and documents.
 ///
 /// Any storage backend implementing this trait should be able to:
@@ -232,4 +233,23 @@ pub trait Subscribe<T: Clone + Send + Sync + 'static> {
 
     /// Unsubscribe from a topic.
     async fn unsubscribe(&self, topic: &str);
+}
+
+/// Trait defining the behavior of a project store.
+///
+/// This abstracts how projects are persisted, making the storage
+/// pluggable — e.g. we can back it with `SledStore`, `MemoryStore`,
+/// or even a database like Postgres in the future.
+pub trait ProjectStore: Send + Sync {
+    /// Create a new peoject and return its API key.
+    fn create(&self, project: Project) -> StorageResult<ApiKey>;
+
+    /// Fetch a project by its API key.
+    fn get(&self, api_key: &str) -> StorageResult<Option<Project>>;
+
+    /// Delete a project by its API key and owner.
+    fn delete(&self, api_key: &str, owner: &str) -> StorageResult<()>;
+
+    /// Get all projects owned by a user
+    fn get_user_projects(&self, user_id: &str) -> StorageResult<Vec<Project>>;
 }
