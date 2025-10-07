@@ -99,11 +99,11 @@ pub struct SledStore {
 impl SledStore {
     /// Initialize the Sled store at the default path.
     pub fn new() -> Self {
-        let projects_path = std::env::var("SAMARITAN_DB_PATH_PROJECTS")
+        let projects_path = std::env::var("TRIGGR_DB_PATH_PROJECTS")
             .unwrap_or_else(|_| DEFAULT_DB_PATH_PROJECTS.to_string());
-        let app_path = std::env::var("SAMARITAN_DB_PATH_APP")
+        let app_path = std::env::var("TRIGGR_DB_PATH_APP")
             .unwrap_or_else(|_| DEFAULT_DB_PATH_APP.to_string());
-        let users_path = std::env::var("SAMARITAN_DB_PATH_USERS")
+        let users_path = std::env::var("TRIGGR_DB_PATH_USERS")
             .unwrap_or_else(|_| DEFAULT_DB_PATH_USERS.to_string());
 
         // Open or create storage directory

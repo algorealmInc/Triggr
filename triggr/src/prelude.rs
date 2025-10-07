@@ -65,7 +65,7 @@ pub type ApiKey = String;
 
 /// The entire state of the database system.
 #[derive(Clone)]
-pub struct Samaritan {
+pub struct Triggr {
     /// Storage will be done with Sled.
     pub store: Arc<SledStore>,
     /// Supported chains
@@ -250,6 +250,6 @@ pub trait ProjectStore: Send + Sync {
     /// Delete a project by its API key and owner.
     fn delete(&self, api_key: &str, owner: &str) -> StorageResult<()>;
 
-    /// Get all projects owned by a user
+    /// Get all projects owned by a user.
     fn get_user_projects(&self, user_id: &str) -> StorageResult<Vec<Project>>;
 }
