@@ -2,3 +2,8 @@
 
 mod prelude;
 mod server;
+mod storage;
+mod chain;
+
+// Re-export prelude definitions
+pub use prelude::*;
