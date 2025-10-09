@@ -7,7 +7,7 @@ use std::{string::FromUtf8Error, sync::Arc};
 use thiserror::Error;
 use tokio::sync::broadcast::Receiver;
 
-use crate::{chain::Blockchain, storage::SledStore};
+use crate::{chain::Blockchain, storage::Sled};
 use utoipa::ToSchema;
 
 /// Errors from internal node operations.
@@ -67,14 +67,14 @@ pub type ApiKey = String;
 #[derive(Clone)]
 pub struct Triggr {
     /// Storage will be done with Sled.
-    pub store: Arc<SledStore>,
+    pub store: Arc<Sled>,
     /// Supported chains
     pub chains: Arc<Blockchain>,
 }
 
 /// Trait for managing **documents** inside collections.
 /// This abstracts how projects are persisted, making the storage
-/// pluggable — e.g. we can back it with `SledStore`, `MemoryStore`,
+/// pluggable — e.g. we can back it with `Sled`, `MemoryStore`,
 /// or even a database like Postgres in the future.
 ///
 /// A document is a JSON-like object identified by a unique `id`.
@@ -238,7 +238,7 @@ pub trait Subscribe<T: Clone + Send + Sync + 'static> {
 /// Trait defining the behavior of a project store.
 ///
 /// This abstracts how projects are persisted, making the storage
-/// pluggable — e.g. we can back it with `SledStore`, `MemoryStore`,
+/// pluggable — e.g. we can back it with `Sled`, `MemoryStore`,
 /// or even a database like Postgres in the future.
 pub trait ProjectStore: Send + Sync {
     /// Create a new peoject and return its API key.

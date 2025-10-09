@@ -85,7 +85,7 @@ where
 /// - `app`: for storing document data (kv data)
 /// - 'users`: for storing user data
 #[derive(Clone)]
-pub struct SledStore {
+pub struct Sled {
     /// Project store
     pub projects: Arc<Db>,
     /// App data store containing documents and collections
@@ -96,13 +96,13 @@ pub struct SledStore {
     pub subscription: DbSubscriptions,
 }
 
-impl SledStore {
-    /// Initialize the Sled store at the default path.
+impl Sled {
+    /// Initialize the Sled store at the default paths.
     pub fn new() -> Self {
         let projects_path = std::env::var("TRIGGR_DB_PATH_PROJECTS")
             .unwrap_or_else(|_| DEFAULT_DB_PATH_PROJECTS.to_string());
-        let app_path = std::env::var("TRIGGR_DB_PATH_APP")
-            .unwrap_or_else(|_| DEFAULT_DB_PATH_APP.to_string());
+        let app_path =
+            std::env::var("TRIGGR_DB_PATH_APP").unwrap_or_else(|_| DEFAULT_DB_PATH_APP.to_string());
         let users_path = std::env::var("TRIGGR_DB_PATH_USERS")
             .unwrap_or_else(|_| DEFAULT_DB_PATH_USERS.to_string());
 
@@ -125,10 +125,31 @@ impl SledStore {
         };
         db
     }
+
+    /// Helper function that receives a user ID and stores the API keys
+    /// of projects associated with it.
+    pub fn add_user_project(&self, user_id: &str, project: Project) -> StorageResult<()> {
+        let mut projects: Vec<Project> = if let Some(value) = self.users.get(user_id)? {
+            bincode::deserialize(&value).map_err(|e| format!("Deserialization error: {e}"))?
+        } else {
+            Vec::new()
+        };
+
+        // avoid duplicates by checking project.id
+        if !projects.iter().any(|p| p.id == project.id) {
+            projects.push(project);
+        }
+
+        let encoded =
+            bincode::serialize(&projects).map_err(|e| format!("Serialization error: {e}"))?;
+        self.users.insert(user_id, encoded)?;
+
+        Ok(())
+    }
 }
 
 #[async_trait]
-impl DocumentStore for SledStore {
+impl DocumentStore for Sled {
     /// Build a namespaced key for storing a document.
     /// Pattern: `document::{project_id}::{collection}::{doc_id}`
     fn key(project_id: &str, collection: &str, doc_id: &str) -> String {
@@ -137,19 +158,14 @@ impl DocumentStore for SledStore {
 
     /// Insert a new document into a collection.
     /// Overwrites any existing document with the same ID.
-    async fn insert(
-        &self,
-        project_id: &str,
-        collection: &str,
-        doc: Document,
-        subs: DbSubscriptions,
-    ) -> StorageResult<()> {
-        let key = DocumentStore::key(project_id, collection, &doc.id);
+    async fn insert(&self, project_id: &str, collection: &str, doc: Document) -> StorageResult<()> {
+        let key = <Sled as DocumentStore>::key(project_id, collection, &doc.id);
         let value = serde_json::to_vec(&doc)?;
         self.app.insert(key.as_bytes(), value)?;
 
         // Broadcast the insert event to all subscribed clients
-        subs.publish(
+        Subscribe::<String>::publish(
+            &self.subscription,
             collection,
             &doc.id,
             WsPayload {
@@ -165,7 +181,7 @@ impl DocumentStore for SledStore {
 
     /// Fetch a single document by ID.
     fn get(&self, project_id: &str, collection: &str, id: &str) -> StorageResult<Option<Document>> {
-        let key = DocumentStore::key(project_id, collection, id);
+        let key = <Sled as DocumentStore>::key(project_id, collection, id);
         if let Some(val) = self.app.get(key.as_bytes())? {
             let doc: Document = serde_json::from_slice(&val)?;
             Ok(Some(doc))
@@ -176,25 +192,13 @@ impl DocumentStore for SledStore {
 
     /// Update an existing document.
     /// (Internally just calls `insert`, since sled overwrites by key.)
-    async fn update(
-        &self,
-        project_id: &str,
-        collection: &str,
-        doc: Document,
-        subs: DbSubscriptions,
-    ) -> StorageResult<()> {
-        self.insert(project_id, collection, doc, subs).await
+    async fn update(&self, project_id: &str, collection: &str, doc: Document) -> StorageResult<()> {
+        self.insert(project_id, collection, doc).await
     }
 
     /// Delete a document from a collection by ID.
-    async fn delete(
-        &self,
-        project_id: &str,
-        collection: &str,
-        id: &str,
-        subs: DbSubscriptions,
-    ) -> StorageResult<()> {
-        let key = DocumentStore::key(project_id, collection, id);
+    async fn delete(&self, project_id: &str, collection: &str, id: &str) -> StorageResult<()> {
+        let key = <Self as DocumentStore>::key(project_id, collection, id);
 
         // Delete and returns the old value (if any)
         let old_value = self
@@ -205,7 +209,8 @@ impl DocumentStore for SledStore {
         // Only use the old value to notify subscribers, not in the publish API
         if let Some(doc) = old_value {
             if let Ok(doc) = serde_json::from_str(&doc) {
-                subs.publish(
+                Subscribe::<String>::publish(
+                    &self.subscription,
                     collection,
                     id,
                     WsPayload {
@@ -263,8 +268,8 @@ impl DocumentStore for SledStore {
     }
 }
 
-// Implement ProjectStore for SledStore
-impl ProjectStore for SledStore {
+// Implement ProjectStore for Sled
+impl ProjectStore for Sled {
     fn create(&self, project: Project) -> StorageResult<String> {
         // Generate a random 32-character alphanumeric key.
         let key = util::generate_nonce::<32>();
