@@ -1,4 +1,3 @@
-// Apache 2.0 License
 // Copyright (c) 2025, Algorealm Inc.
 
 import WebSocket from "ws";
