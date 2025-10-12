@@ -6,5 +6,5 @@ extern crate triggr;
 #[tokio::main]
 async fn main() {
     // Start the triggr server
-    triggr::start()
+    triggr::start().await;
 }
