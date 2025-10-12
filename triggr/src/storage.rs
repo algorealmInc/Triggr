@@ -29,10 +29,7 @@ impl DbSubscriptions {
 
 // Implement `Subscribe` for DbSubscription
 #[async_trait]
-impl<T> Subscribe<T> for DbSubscriptions
-where
-    T: Clone + Send + Sync + 'static,
-{
+impl Subscribe for DbSubscriptions {
     /// Publish a message to all subscribers of a topic.
     async fn publish(&self, collection: &str, doc_id: &str, mut json: WsPayload) {
         let topics = self.topics.read().await;
@@ -72,10 +69,6 @@ where
 
         sender.subscribe()
     }
-
-    async fn unsubscribe(&self, topic: &str) {
-        todo!()
-    }
 }
 
 /// Concrete storage backend using Sled.
@@ -93,7 +86,7 @@ pub struct Sled {
     /// Users store
     pub users: Arc<Db>,
     /// Subscription mechanism
-    pub subscription: DbSubscriptions,
+    pub subscriptions: DbSubscriptions,
 }
 
 impl Sled {
@@ -121,7 +114,7 @@ impl Sled {
             projects: Arc::new(projects_db),
             app: Arc::new(app_db),
             users: Arc::new(users_db),
-            subscription: DbSubscriptions::default(),
+            subscriptions: DbSubscriptions::default(),
         };
         db
     }
@@ -164,8 +157,8 @@ impl DocumentStore for Sled {
         self.app.insert(key.as_bytes(), value)?;
 
         // Broadcast the insert event to all subscribed clients
-        Subscribe::<String>::publish(
-            &self.subscription,
+        Subscribe::publish(
+            &self.subscriptions,
             collection,
             &doc.id,
             WsPayload {
@@ -209,8 +202,8 @@ impl DocumentStore for Sled {
         // Only use the old value to notify subscribers, not in the publish API
         if let Some(doc) = old_value {
             if let Ok(doc) = serde_json::from_str(&doc) {
-                Subscribe::<String>::publish(
-                    &self.subscription,
+                Subscribe::publish(
+                    &self.subscriptions,
                     collection,
                     id,
                     WsPayload {

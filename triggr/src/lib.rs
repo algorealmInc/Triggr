@@ -7,4 +7,6 @@ mod chain;
 mod util;
 
 // Re-export prelude definitions
-pub use prelude::*;
+pub(crate) use prelude::*;
+
+pub use server::startup::run as start;

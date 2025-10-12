@@ -1,5 +1,7 @@
 // Copyright (c) 2025, Algorealm Inc.
 
+// This module contains all the important definitions that have are in a global namespace for Triggr.
+
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -8,7 +10,6 @@ use thiserror::Error;
 use tokio::sync::broadcast::Receiver;
 
 use crate::{chain::Blockchain, storage::Sled};
-use utoipa::ToSchema;
 
 /// Errors from internal node operations.
 #[derive(Debug, Error)]
@@ -70,6 +71,19 @@ pub struct Triggr {
     pub store: Arc<Sled>,
     /// Supported chains
     pub chains: Arc<Blockchain>,
+}
+
+impl Triggr {
+    /// Initialize system state.
+    pub fn new() -> Self {
+        use dotenvy::dotenv;
+        dotenv().ok(); // load from .env
+
+        Self {
+            store: Arc::new(Sled::new()),
+            chains: Arc::new(Blockchain::default()),
+        }
+    }
 }
 
 /// Trait for managing **documents** inside collections.
@@ -167,7 +181,7 @@ pub trait DocumentStore {
 }
 
 /// Metadata describing a document's lifecycle and versioning.
-#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DocMetadata {
     /// When the document was created.
     pub created_at: u64,
@@ -180,7 +194,7 @@ pub struct DocMetadata {
 }
 
 /// A single JSON-like document stored inside a collection.
-#[derive(Clone, Debug, Serialize, Deserialize, ToSchema, Default)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct Document {
     /// The unique document ID within its collection.
     pub id: String,
@@ -202,14 +216,14 @@ pub struct WsPayload {
 }
 
 /// Represents a database project on the network.
-#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Project {
     /// Project id
     pub id: String,
     /// Project owners id
     pub owner: String,
-    /// The address of the contracts node
-    pub contracts_node_address: String,
+    // The address of the contracts node. (PassetHub for now)
+    // pub contracts_node_address: String,
     /// Description
     pub description: String,
     /// Location of contract metadata
@@ -224,15 +238,15 @@ pub struct Project {
 ///
 /// This enables real-time synchronization across clients.
 #[async_trait]
-pub trait Subscribe<T: Clone + Send + Sync + 'static> {
+pub trait Subscribe {
     /// Publish an update to all subscribers of a topic.
     async fn publish(&self, collection: &str, doc_id: &str, mut json: WsPayload);
 
     /// Subscribe to a topic (e.g. a document or collection).
-    async fn subscribe(&self, topic: &str) -> Receiver<T>;
+    async fn subscribe(&self, topic: &str) -> Receiver<String>;
 
     /// Unsubscribe from a topic.
-    async fn unsubscribe(&self, topic: &str);
+    async fn unsubscribe(&self, _topic: &str) {}
 }
 
 /// Trait defining the behavior of a project store.
