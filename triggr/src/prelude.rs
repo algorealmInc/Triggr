@@ -5,6 +5,7 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use utoipa::ToSchema;
 use std::{string::FromUtf8Error, sync::Arc};
 use thiserror::Error;
 use tokio::sync::broadcast::Receiver;
@@ -181,7 +182,7 @@ pub trait DocumentStore {
 }
 
 /// Metadata describing a document's lifecycle and versioning.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct DocMetadata {
     /// When the document was created.
     pub created_at: u64,
@@ -194,7 +195,7 @@ pub struct DocMetadata {
 }
 
 /// A single JSON-like document stored inside a collection.
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default, ToSchema)]
 pub struct Document {
     /// The unique document ID within its collection.
     pub id: String,
@@ -205,7 +206,7 @@ pub struct Document {
 }
 
 /// JSON structure to return to subscribed clients
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize, ToSchema)]
 pub struct WsPayload {
     /// Type of operation performed
     pub op: String,
@@ -216,7 +217,7 @@ pub struct WsPayload {
 }
 
 /// Represents a database project on the network.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct Project {
     /// Project id
     pub id: String,

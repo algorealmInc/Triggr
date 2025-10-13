@@ -1,7 +1,7 @@
 // Copyright (c) 2025, Algorealm Inc.
 
-use base64::{engine::general_purpose, Engine as _};
-use rand::{rngs::OsRng, TryRngCore};
+use base64::{Engine as _, engine::general_purpose};
+use rand::{TryRngCore, rngs::OsRng};
 
 /// Generate a random nonce.
 ///

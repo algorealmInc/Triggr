@@ -2,6 +2,7 @@
 
 pub mod console;
 pub mod db;
+pub mod docs;
 pub mod ws;
 
 use super::*;

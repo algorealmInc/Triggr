@@ -3,14 +3,14 @@
 // This module contains HTTP(S) route handlers to perform internal database operations.
 
 use crate::{
-    prelude::{Document, DocumentStore, Triggr, StorageError},
+    prelude::{Document, DocumentStore, StorageError, Triggr},
     server::middleware::RefProject,
 };
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde_json::json;
 
@@ -62,7 +62,15 @@ impl<T> OptionExt<T> for Option<T> {
     }
 }
 
-/// List all collections for a project.
+/// List all collections for a project
+#[utoipa::path(
+    get,
+    path = "/api/db/collections",
+    responses(
+        (status = 200, description = "List of collections for the project", body = [String]),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn list_collections(
     State(triggr): State<Triggr>,
     ref_project: RefProject,
@@ -72,6 +80,19 @@ pub async fn list_collections(
 }
 
 /// Insert a new document
+#[utoipa::path(
+    post,
+    path = "/api/db/collections/{name}/docs",
+    request_body = inline(Document),
+    params(
+        ("name" = String, Path, description = "Collection name")
+    ),
+    responses(
+        (status = 201, description = "Document inserted successfully", body = inline(serde_json::Value)),
+        (status = 400, description = "Invalid document or malformed request"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn insert_document(
     ref_project: RefProject,
     State(triggr): State<Triggr>,
@@ -83,6 +104,17 @@ pub async fn insert_document(
 }
 
 /// List all documents in a collection
+#[utoipa::path(
+    get,
+    path = "/api/db/collections/{name}/docs",
+    params(
+        ("name" = String, Path, description = "Collection name")
+    ),
+    responses(
+        (status = 200, description = "List of documents in the collection", body = [Document]),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn list_documents(
     State(triggr): State<Triggr>,
     Path(name): Path<String>,
@@ -93,6 +125,19 @@ pub async fn list_documents(
 }
 
 /// Get a document by ID
+#[utoipa::path(
+    get,
+    path = "/api/db/collections/{name}/docs/{id}",
+    params(
+        ("name" = String, Path, description = "Collection name"),
+        ("id" = String, Path, description = "Document ID")
+    ),
+    responses(
+        (status = 200, description = "Document retrieved successfully", body = Document),
+        (status = 404, description = "Document not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn get_document(
     State(triggr): State<Triggr>,
     Path((name, id)): Path<(String, String)>,
@@ -105,26 +150,56 @@ pub async fn get_document(
     Ok((StatusCode::OK, Json(doc)))
 }
 
-/// Update a document.
+/// Update a document
+#[utoipa::path(
+    put,
+    path = "/api/db/collections/{name}/docs/{id}",
+    request_body = inline(Document),
+    params(
+        ("name" = String, Path, description = "Collection name"),
+        ("id" = String, Path, description = "Document ID")
+    ),
+    responses(
+        (status = 200, description = "Document updated successfully", body = inline(serde_json::Value)),
+        (status = 400, description = "Invalid document or malformed request"),
+        (status = 404, description = "Document not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn update_document(
     ref_project: RefProject,
     State(triggr): State<Triggr>,
     Path((name, _)): Path<(String, String)>,
     Json(doc): Json<Document>,
 ) -> Result<impl IntoResponse, AppError> {
-    triggr.store
+    triggr
+        .store
         .update(&ref_project.project.id, &name, doc)
         .await?;
     Ok((StatusCode::OK, Json(json!({ "ok": true }))))
 }
 
-/// Delete a document.
+/// Delete a document
+#[utoipa::path(
+    delete,
+    path = "/api/db/collections/{name}/docs/{id}",
+    params(
+        ("name" = String, Path, description = "Collection name"),
+        ("id" = String, Path, description = "Document ID")
+    ),
+    responses(
+        (status = 204, description = "Document deleted successfully"),
+        (status = 404, description = "Document not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn delete_document(
     State(triggr): State<Triggr>,
     Path((name, id)): Path<(String, String)>,
     ref_project: RefProject,
 ) -> Result<impl IntoResponse, AppError> {
-    triggr.store
+    triggr
+        .store
         .delete(&ref_project.project.id, &name, &id)
         .await?;
     Ok((StatusCode::NO_CONTENT, "".into_response()))

@@ -1,10 +1,15 @@
 // Copyright (c) 2025, Algorealm Inc.
 
+// This module contains routes to handled and direact incoming http and ws requests.
+
+use super::handlers::docs::ApiDoc;
 use super::handlers::{console, db, ws};
 use super::middleware as midw;
 use super::*;
 use axum::routing::{delete, get};
-use axum::{middleware as mw, routing::post, Router};
+use axum::{Router, middleware as mw, routing::post};
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 /// Returns routes to handle DB requests (documents only, collections implicit).
 pub fn db_routes() -> Router<Triggr> {
@@ -44,4 +49,10 @@ pub fn ws_route() -> Router<Triggr> {
     Router::new()
         .route("/ws", get(ws::ws_handler))
         .route_layer(mw::from_fn(midw::require_api_key))
+}
+
+/// Return swagger docs route.
+pub fn docs_routes() -> Router<Triggr> {
+    // SwaggerUi doesn’t need state, but we can *set* the state type so it merges cleanly.
+    Router::from(SwaggerUi::new("/docs").url("/api-doc/openapi.json", ApiDoc::openapi()))
 }

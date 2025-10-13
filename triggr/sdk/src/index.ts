@@ -45,17 +45,17 @@ export interface DocMetadata {
     tags: string[];
 }
 
-interface SamaritanSDKOptions {
+interface TriggrSDKOptions {
     baseURL: string;
     apiKey: string;
 }
 
-export class SamaritanSDK {
+export class TriggrSDK {
     private api: AxiosInstance;
     private ws?: WebSocket;
     private eventHandlers: Map<string, Set<EventHandler>> = new Map();
 
-    constructor(private options: SamaritanSDKOptions) {
+    constructor(private options: TriggrSDKOptions) {
         // Immediately configure REST API
         this.api = axios.create({
             baseURL: options.baseURL,

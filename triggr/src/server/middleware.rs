@@ -8,12 +8,12 @@ use super::*;
 use axum::{
     body::Body,
     extract::FromRequestParts,
-    http::{request::Parts, Request, StatusCode},
+    http::{Request, StatusCode, request::Parts},
     middleware::Next,
     response::{IntoResponse, Response},
 };
 use futures::Future;
-use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
+use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
 use serde::{Deserialize, Serialize};
 
 /// Represents the project that an incoming request references.

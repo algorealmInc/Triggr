@@ -10,133 +10,241 @@ use axum::{
     Json,
 };
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::json;
+use utoipa::ToSchema;
 
 use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
 
 use super::{db::AppError, *};
 
-pub async fn login(State(_triggr): State<Triggr>, auth: Auth) -> impl IntoResponse {
-    // Return decoded user details
-    (StatusCode::OK, Json(json!({ "user": auth.claims })))
-}
+/// Max uploadable file size
+const MAX_FILE_SIZE: usize = 10 * 1024 * 1024; // 10MB
 
-/// Request schema for Swagger (multipart form)
-pub struct ProjectCreateForm {
-    pub project_name: String,
-    pub description: String,
-    pub contract_hash: String,
-    pub contracts_json: Vec<u8>,
-}
+/// Contracts file directory
+const CONTRACTS_DIR: &str = "./.data/contracts"; // Use relative path
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct CreateProjectResponse {
     pub message: String,
     pub api_key: String,
     pub project: Project,
 }
 
+/// Request schema for Swagger (multipart form)
+#[derive(ToSchema)]
+pub struct ProjectCreateForm {
+    pub project_name: String,
+    pub description: String,
+    pub contract_hash: String,
+    #[schema(value_type = String, format = Binary)]
+    pub contracts_json: Vec<u8>,
+}
+
+// Console login endpoint
+#[utoipa::path(
+    post,
+    path = "/api/console/login",
+    responses(
+        (status = 200, description = "User successfully authenticated"),
+        (status = 401, description = "Invalid or missing credentials")
+    )
+)]
+pub async fn login(State(_triggr): State<Triggr>, auth: Auth) -> impl IntoResponse {
+    // Return decoded user details
+    (StatusCode::OK, Json(json!({ "user": auth.claims })))
+}
+
 /// Create a new project.
+#[utoipa::path(
+    post,
+    path = "/api/console/project",
+    request_body(
+        content = ProjectCreateForm,
+        content_type = "multipart/form-data",
+        description = "Project creation form with contracts.json upload"
+    ),
+    responses(
+        (status = 201, description = "Project created successfully", body = inline(CreateProjectResponse)),
+        (status = 401, description = "Unauthorized"),
+        (status = 400, description = "Invalid input"),
+        (status = 413, description = "File too large"),
+        (status = 500, description = "Internal server error"),
+    ),
+)]
 pub async fn create_project(
     State(triggr): State<Triggr>,
     auth: Auth,
     mut multipart: Multipart,
-) -> Result<(StatusCode, Json<CreateProjectResponse>), (StatusCode, String)> {
+) -> Result<(StatusCode, Json<CreateProjectResponse>), AppError> {
     let mut project_name: Option<String> = None;
     let mut description: Option<String> = None;
     let mut contract_hash: Option<String> = None;
     let mut contract_file_path: Option<PathBuf> = None;
 
-    while let Some(field) = multipart.next_field().await.map_err(|_| {
-        (
-            StatusCode::BAD_REQUEST,
-            "Failed to parse multipart".to_string(),
-        )
-    })? {
+    // Ensure contracts directory exists
+    tokio::fs::create_dir_all(CONTRACTS_DIR)
+        .await
+        .map_err(|e| AppError::Internal(format!("Failed to create contracts directory: {}", e)))?;
+
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|e| AppError::BadRequest(format!("Failed to parse multipart: {}", e)))?
+    {
         let name = field.name().unwrap_or("").to_string();
 
         match name.as_str() {
             "project_name" => {
-                project_name =
-                    Some(field.text().await.map_err(|_| {
-                        (StatusCode::BAD_REQUEST, "Invalid project_name".to_string())
-                    })?);
+                let text = field
+                    .text()
+                    .await
+                    .map_err(|e| AppError::BadRequest(format!("Invalid project_name: {}", e)))?;
+
+                // Validate project name
+                if text.trim().is_empty() {
+                    return Err(AppError::BadRequest(
+                        "Project name cannot be empty".to_string(),
+                    ));
+                }
+
+                project_name = Some(text.trim().to_string());
             }
             "description" => {
-                description = Some(field.text().await.unwrap_or_else(|_| "".to_string()));
+                description = Some(
+                    field
+                        .text()
+                        .await
+                        .unwrap_or_else(|_| String::new())
+                        .trim()
+                        .to_string(),
+                );
             }
             "contract_hash" => {
-                contract_hash = Some(field.text().await.unwrap_or_else(|_| "".to_string()));
+                let hash = field.text().await.unwrap_or_else(|_| String::new());
+
+                // Validate hash format (alphanumeric only)
+                if !hash.chars().all(|c| c.is_alphanumeric()) {
+                    return Err(AppError::BadRequest(
+                        "Invalid contract hash format".to_string(),
+                    ));
+                }
+
+                contract_hash = Some(hash);
             }
             "contracts_json" => {
-                // Save uploaded file to tmp/
-                let path = PathBuf::from(&format!(
-                    "/.contracts/{}.json",
-                    contract_hash.clone().unwrap()
-                ));
-                let mut file = tokio::fs::File::create(&path).await.map_err(|_| {
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "Could not save file".to_string(),
+                // Ensure we have contract_hash before processing file
+                let hash = contract_hash.as_ref().ok_or_else(|| {
+                    AppError::BadRequest(
+                        "contract_hash must be provided before contracts_json".to_string(),
                     )
                 })?;
+
+                // Read file data with size limit
                 let data = field
                     .bytes()
                     .await
-                    .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid file".to_string()))?;
-                file.write_all(&data).await.map_err(|_| {
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "Failed to write file".to_string(),
-                    )
-                })?;
+                    .map_err(|e| AppError::BadRequest(format!("Invalid file data: {}", e)))?;
+
+                // Check file size
+                if data.len() > MAX_FILE_SIZE {
+                    return Err(AppError::BadRequest(format!(
+                        "File too large. Max size: {} bytes",
+                        MAX_FILE_SIZE
+                    )));
+                }
+
+                // Validate JSON
+                serde_json::from_slice::<serde_json::Value>(&data)
+                    .map_err(|e| AppError::BadRequest(format!("Invalid JSON file: {}", e)))?;
+
+                // Create safe file path
+                let filename = format!("{}.json", hash);
+                let path = PathBuf::from(CONTRACTS_DIR).join(&filename);
+
+                // Write file
+                let mut file = tokio::fs::File::create(&path)
+                    .await
+                    .map_err(|e| AppError::Internal(format!("Failed to create file: {}", e)))?;
+
+                file.write_all(&data)
+                    .await
+                    .map_err(|e| AppError::Internal(format!("Failed to write file: {}", e)))?;
+
+                file.flush()
+                    .await
+                    .map_err(|e| AppError::Internal(format!("Failed to flush file: {}", e)))?;
+
                 contract_file_path = Some(path);
             }
-            _ => {}
+            _ => {
+                // Log unexpected fields but don't fail
+                #[cfg(feature = "tracing")]
+                tracing::debug!("Unexpected field in multipart: {}", name);
+            }
         }
     }
 
     // Validate required fields
     let project_name =
-        project_name.ok_or((StatusCode::BAD_REQUEST, "Missing project_name".to_string()))?;
+        project_name.ok_or_else(|| AppError::BadRequest("Missing project_name".to_string()))?;
 
     let description =
-        description.ok_or((StatusCode::BAD_REQUEST, "Missing description".to_string()))?;
+        description.ok_or_else(|| AppError::BadRequest("Missing description".to_string()))?;
 
-    let _ =
-        contract_hash.ok_or((StatusCode::BAD_REQUEST, "Missing contract hash".to_string()))?;
+    let _contract_hash =
+        contract_hash.ok_or_else(|| AppError::BadRequest("Missing contract_hash".to_string()))?;
 
-    // Construct a project
+    let contract_path = contract_file_path
+        .ok_or_else(|| AppError::BadRequest("Missing contracts_json file".to_string()))?;
+
+    // Construct project
     let project = Project {
         id: project_name.clone(),
         owner: auth.claims.user_id.clone(),
         description: description.clone(),
-        contract_file_path: contract_file_path
-            .map(|p| p.display().to_string())
-            .unwrap_or_default(),
+        contract_file_path: contract_path.display().to_string(),
     };
 
     // Save to database
-    let api_key = triggr.store.create(project.clone()).map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("DB error: {}", e),
-        )
-    })?;
+    let api_key = match triggr.store.create(project.clone()) {
+        Ok(key) => key,
+        Err(e) => {
+            // Clean up uploaded file on database error
+            if let Err(_cleanup_err) = tokio::fs::remove_file(&contract_path).await {
+                #[cfg(feature = "tracing")]
+                tracing::error!("Failed to cleanup file after DB error: {}", _cleanup_err);
+            }
 
-    // Response
-    Ok((
-        StatusCode::CREATED,
-        Json(CreateProjectResponse {
-            message: "Project created".to_string(),
-            api_key,
-            project,
-        }),
-    ))
+            return Err(AppError::Internal(format!(
+                "Failed to create project: {}",
+                e
+            )));
+        }
+    };
+
+    // Return success response
+    let response = CreateProjectResponse {
+        message: "Project created successfully".to_string(),
+        api_key,
+        project,
+    };
+
+    Ok((StatusCode::CREATED, Json(response)))
 }
 
 /// Delete a project
+#[utoipa::path(
+    delete,
+    path = "/api/console/project/{api_key}",
+    params(
+        ("api_key" = String, Path, description = "Project Api Key"),
+    ),
+    responses(
+        (status = 200, description = "Project deleted successfully"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn delete_project(
     State(triggr): State<Triggr>,
     Path(api_key): Path<String>,
@@ -152,6 +260,19 @@ pub async fn delete_project(
 
 /// List all projects belonging to a specific user.
 /// Fetches all projects associated with the given `user_id`.
+#[utoipa::path(
+    get,
+    path = "/api/console/projects",
+    params(
+        ("user_id" = String, Path, description = "The unique ID of the user whose projects to list")
+    ),
+    responses(
+        (status = 200, description = "List of projects retrieved successfully", body = [Project]),
+        (status = 404, description = "User not found"),
+        (status = 401, description = "Unauthorized"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn list_projects(
     State(triggr): State<Triggr>,
     auth: Auth,

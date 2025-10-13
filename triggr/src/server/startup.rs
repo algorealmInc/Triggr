@@ -15,6 +15,7 @@ pub async fn run() {
         .merge(routes::db_routes())
         .merge(routes::console_routes())
         .merge(routes::ws_route())
+        .merge(routes::docs_routes())
         .with_state(state.clone())
         .layer(Extension(state)) // make `Triggr` available
         .route("/health", get(|| async { "OK" }));

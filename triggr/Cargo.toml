@@ -19,3 +19,9 @@ dotenvy = "0.15.7"
 futures = "0.3.31"
 jsonwebtoken = "9.3.1"
 anyhow = "1.0.100"
+tracing = "0.1.41"
+utoipa = { version = "5.4.0", features = ["macros"] }
+utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
+
+[features]
+tracing = []

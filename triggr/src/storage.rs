@@ -9,8 +9,8 @@ use async_trait::async_trait;
 use sled::{Db, IVec};
 use std::{collections::HashMap, fs, path::Path, sync::Arc};
 use tokio::sync::{
-    broadcast::{self, Receiver, Sender},
     RwLock,
+    broadcast::{self, Receiver, Sender},
 };
 
 /// Subscriptions to track topics and help broadcast database changes to clients.

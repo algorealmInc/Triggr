@@ -6,7 +6,7 @@ use super::*;
 use axum::extract::ws::Message;
 use axum::http::{HeaderMap, StatusCode};
 use axum::{
-    extract::{ws::WebSocket, State, WebSocketUpgrade},
+    extract::{State, WebSocketUpgrade, ws::WebSocket},
     response::IntoResponse,
 };
 use futures::stream::StreamExt;

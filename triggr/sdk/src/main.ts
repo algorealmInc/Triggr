@@ -1,11 +1,11 @@
 // Apache 2.0 License
 // Copyright (c) 2025, Algorealm Inc.
 
-import { SamaritanSDK } from ".";
+import { TriggrSDK } from ".";
 
 async function main() {
     // Create SDK instance
-    const sdk = new SamaritanSDK({
+    const sdk = new TriggrSDK({
         baseURL: "http://localhost:5190",
         apiKey: "fdkjfnn"
     });
