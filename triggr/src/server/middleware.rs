@@ -77,14 +77,14 @@ where
 // Middleware to ensure API key correctness.
 pub async fn require_api_key(mut req: Request<Body>, next: Next) -> Result<Response, StatusCode> {
     // Get the state from extensions
-    let sam = req
+    let triggr = req
         .extensions()
         .get::<Triggr>()
         .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
 
     if let Some(key) = req.headers().get("x-api-key") {
         if let Ok(key_str) = key.to_str() {
-            if let Ok(search_result) = ProjectStore::get(&*sam.store, key_str) {
+            if let Ok(search_result) = ProjectStore::get(&*triggr.store, key_str) {
                 if let Some(project) = search_result {
                     let project = RefProject { project };
 
