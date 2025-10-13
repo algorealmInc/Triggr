@@ -19,7 +19,7 @@ License](#distribution-license) and make changes or new works
 based on the software according to [Changes and New Works
 License](#changes-and-new-works-license).
 
-## Distribution License
+## Distribution License 
 
 The licensor grants you an additional copyright license
 to distribute copies of the software.  Your license
