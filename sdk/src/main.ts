@@ -1,5 +1,6 @@
-// Apache 2.0 License
 // Copyright (c) 2025, Algorealm Inc.
+
+// Simple example to connect and listen to a triggr node using the TriggrSDK.
 
 import { TriggrSDK } from ".";
 
