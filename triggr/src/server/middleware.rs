@@ -5,15 +5,16 @@
 use std::env;
 
 use super::*;
+use async_trait::async_trait;
 use axum::{
     body::Body,
     extract::FromRequestParts,
-    http::{Request, StatusCode, request::Parts},
+    http::{header, request::Parts, Request, StatusCode},
     middleware::Next,
     response::{IntoResponse, Response},
 };
 use futures::Future;
-use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
+use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
 
 /// Represents the project that an incoming request references.
@@ -26,6 +27,8 @@ pub struct RefProject {
 struct Jwk {
     n: String,
     e: String,
+    kid: String,
+    alg: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -40,9 +43,8 @@ pub struct Auth {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ClerkClaims {
-    pub sub: String,
-    pub user_id: String,
-    // Other clerk claims
+    #[serde(rename = "sub")]
+    pub user_id: String, // <- We alias "sub" directly to user_id
 }
 
 #[derive(Debug)]
@@ -99,6 +101,7 @@ pub async fn require_api_key(mut req: Request<Body>, next: Next) -> Result<Respo
 }
 
 // Middleware to ensure authentication of session.
+#[async_trait]
 impl<S> FromRequestParts<S> for Auth
 where
     S: Send + Sync,
@@ -111,46 +114,42 @@ where
     ) -> impl Future<Output = Result<Self, Self::Rejection>> {
         async {
             let headers = &parts.headers;
+            let token = headers
+                .get(header::AUTHORIZATION)
+                .and_then(|h| h.to_str().ok())
+                .and_then(|h| h.strip_prefix("Bearer "))
+                .ok_or_else(|| AuthError("Missing Authorization header".into()))?;
 
-            // Authenticate with Clerk JWT
-            if let Some(auth_header) = headers.get(axum::http::header::AUTHORIZATION) {
-                if let Ok(auth_str) = auth_header.to_str() {
-                    if let Some(token) = auth_str.strip_prefix("Bearer ") {
-                        // Get decoding key
-                        if let Ok(n_and_e) = extract_n_and_e() {
-                            if let Some(jwks_values) = n_and_e {
-                                let decoding_key = DecodingKey::from_rsa_components(
-                                    &jwks_values.0,
-                                    &jwks_values.1,
-                                )
-                                .unwrap();
-                                let validation = Validation::new(Algorithm::RS256);
-                                let decoded =
-                                    decode::<ClerkClaims>(token, &decoding_key, &validation)
-                                        .map_err(|_| AuthError("Invalid Clerk token".into()))?;
+            // Decode header to get key ID (kid)
+            let header =
+                decode_header(token).map_err(|_| AuthError("Invalid JWT header".into()))?;
+            let kid = header
+                .kid
+                .ok_or(AuthError("Missing kid in JWT header".into()))?;
 
-                                return Ok(Auth {
-                                    claims: decoded.claims,
-                                });
-                            }
-                        }
-                    }
-                }
-            }
+            // Match JWK by kid
+            let jwk = extract_matching_jwk(&kid)
+                .map_err(|e| AuthError(format!("Failed to extract JWK: {}", e)))?
+                .ok_or(AuthError("No matching JWK found".into()))?;
 
-            Err(AuthError("Missing authentication".into()))
+            // Decode token
+            let decoding_key = DecodingKey::from_rsa_components(&jwk.n, &jwk.e)
+                .map_err(|_| AuthError("Invalid RSA key components".into()))?;
+            let validation = Validation::new(Algorithm::RS256);
+
+            let decoded = decode::<ClerkClaims>(token, &decoding_key, &validation)
+                .map_err(|_| AuthError("Invalid or expired Clerk token".into()))?;
+
+            Ok(Auth {
+                claims: decoded.claims,
+            })
         }
     }
 }
 
-// Helper function to extract "n" and "e" from JWKS stored in env
-fn extract_n_and_e() -> anyhow::Result<Option<(String, String)>> {
-    // Read JWKS JSON from environment variable
+/// Extract and find the JWK that matches a given `kid`
+fn extract_matching_jwk(kid: &str) -> anyhow::Result<Option<Jwk>> {
     let jwks_str = env::var("TRIGGR_CLERKS_JWKS")?;
-
-    // Parse into structured data
     let jwks: Jwks = serde_json::from_str(&jwks_str)?;
-
-    // Extract the first key’s `n` and `e`
-    Ok(jwks.keys.into_iter().next().map(|k| (k.n, k.e)))
+    Ok(jwks.keys.into_iter().find(|k| k.kid == kid))
 }
