@@ -263,9 +263,6 @@ pub async fn delete_project(
 #[utoipa::path(
     get,
     path = "/api/console/projects",
-    params(
-        ("user_id" = String, Path, description = "The unique ID of the user whose projects to list")
-    ),
     responses(
         (status = 200, description = "List of projects retrieved successfully", body = [Project]),
         (status = 404, description = "User not found"),

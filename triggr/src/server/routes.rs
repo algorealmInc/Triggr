@@ -41,7 +41,7 @@ pub fn console_routes() -> Router<Triggr> {
             "/api/console/project/{api_key}",
             delete(console::delete_project),
         )
-        .route("/api/console/projects", delete(console::list_projects))
+        .route("/api/console/projects", get(console::list_projects))
 }
 
 /// Returns the 'ws' route.
