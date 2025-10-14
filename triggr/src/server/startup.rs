@@ -18,9 +18,9 @@ pub async fn run() {
         // Allow common HTTP methods
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
         // Allow common headers like Authorization
-        .allow_headers([http::header::AUTHORIZATION, http::header::CONTENT_TYPE])
+        .allow_headers([http::header::AUTHORIZATION, http::header::CONTENT_TYPE]);
         // Allow credentials if needed
-        .allow_credentials(true);
+        // .allow_credentials(true);
 
 
     // Server config
