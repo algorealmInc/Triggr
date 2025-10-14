@@ -22,6 +22,7 @@ anyhow = "1.0.100"
 tracing = "0.1.41"
 utoipa = { version = "5.4.0", features = ["macros"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
+tower-http = { version="0.6.6", features = ["cors"] }
 
 [features]
 tracing = []

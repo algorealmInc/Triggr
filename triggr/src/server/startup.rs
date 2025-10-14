@@ -2,13 +2,26 @@
 
 use super::*;
 use crate::server::routes;
-use axum::{routing::get, Extension, Router};
+use axum::{routing::get, Extension, Router, http::{Method, self}};
+use tower_http::cors::{CorsLayer, Any};
 use tokio::net::TcpListener;
 
 /// Configure the server and get it running.
 pub async fn run() {
     // Initialize shared system state.
     let state = Triggr::new();
+
+    // CORS configuration
+    let cors = CorsLayer::new()
+        // Allow all origins in development
+        .allow_origin(Any)
+        // Allow common HTTP methods
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
+        // Allow common headers like Authorization
+        .allow_headers([http::header::AUTHORIZATION, http::header::CONTENT_TYPE])
+        // Allow credentials if needed
+        .allow_credentials(true);
+
 
     // Server config
     let app = Router::new()
@@ -18,6 +31,7 @@ pub async fn run() {
         .merge(routes::docs_routes())
         .with_state(state.clone())
         .layer(Extension(state)) // make `Triggr` available
+        .layer(cors)    // Add CORS
         .route("/health", get(|| async { "OK" }));
 
     // Deploy server
