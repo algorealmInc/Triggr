@@ -275,8 +275,7 @@ pub async fn list_projects(
     auth: Auth,
 ) -> Result<Json<Vec<Project>>, (StatusCode, String)> {
     match ProjectStore::get_user_projects(&*triggr.store, &auth.claims.user_id) {
-        Ok(projects) if !projects.is_empty() => Ok(Json(projects)),
-        Ok(_) => Err((StatusCode::NOT_FOUND, "User not found".to_string())),
+        Ok(projects) => Ok(Json(projects)),
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Failed to list projects: {}", e),
