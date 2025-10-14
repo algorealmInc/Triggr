@@ -4,6 +4,8 @@
 
 use std::env;
 
+use crate::util::decrypt;
+
 use super::*;
 use async_trait::async_trait;
 use axum::{
@@ -85,13 +87,24 @@ pub async fn require_api_key(mut req: Request<Body>, next: Next) -> Result<Respo
         .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
 
     if let Some(key) = req.headers().get("x-api-key") {
-        if let Ok(key_str) = key.to_str() {
-            if let Ok(search_result) = ProjectStore::get(&*triggr.store, key_str) {
-                if let Some(project) = search_result {
-                    let project = RefProject { project };
+        if let Ok(mut key_str) = key.to_str() {
+            // Check length of key
+            if key_str.len() != 32 {
+                // This request is coming from the console.
+                // Try to decrypt it
+                let encryption_key = env::var("TRIGGR_ENCRYPTION_KEY").or_else(|_| Err(StatusCode::UNAUTHORIZED))?;
+                let decrypted_str = &decrypt(key_str, &encryption_key).or_else(|_| Err(StatusCode::UNAUTHORIZED))?;
 
-                    req.extensions_mut().insert(project);
-                    return Ok(next.run(req).await);
+                // Assign decrypted key
+                key_str = decrypted_str;
+
+                if let Ok(search_result) = ProjectStore::get(&*triggr.store, key_str) {
+                    if let Some(project) = search_result {
+                        let project = RefProject { project };
+    
+                        req.extensions_mut().insert(project);
+                        return Ok(next.run(req).await);
+                    }
                 }
             }
         }

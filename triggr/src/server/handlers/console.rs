@@ -27,7 +27,6 @@ const CONTRACTS_DIR: &str = "./.data/contracts"; // Use relative path
 #[derive(Serialize, ToSchema)]
 pub struct CreateProjectResponse {
     pub message: String,
-    pub api_key: String,
     pub project: Project,
 }
 
@@ -226,7 +225,6 @@ pub async fn create_project(
     // Return success response
     let response = CreateProjectResponse {
         message: "Project created successfully".to_string(),
-        api_key,
         project,
     };
 

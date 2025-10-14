@@ -6,11 +6,11 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use utoipa::ToSchema;
-use std::{string::FromUtf8Error, sync::Arc};
+use std::{string::FromUtf8Error, sync::Arc, env::VarError};
 use thiserror::Error;
 use tokio::sync::broadcast::Receiver;
 
-use crate::{chain::Blockchain, storage::Sled};
+use crate::{chain::Blockchain, storage::Sled, util::CryptoError};
 
 /// Errors from internal node operations.
 #[derive(Debug, Error)]
@@ -47,7 +47,9 @@ impl_storage_error_from!(
     &str,
     std::io::Error,
     FromUtf8Error,
-    Box<bincode::ErrorKind>
+    Box<bincode::ErrorKind>,
+    VarError,
+    CryptoError
 );
 
 /// Result type for storage operations.

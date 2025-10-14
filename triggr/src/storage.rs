@@ -4,10 +4,12 @@
 // We are using sled for the internal database storage. This is because it is fast and composable in a single binary.
 // No external (network) dependencies.
 
+use crate::util::encrypt;
+
 use super::*;
 use async_trait::async_trait;
 use sled::{Db, IVec};
-use std::{collections::HashMap, fs, path::Path, sync::Arc};
+use std::{collections::HashMap, fs, path::Path, sync::Arc, env};
 use tokio::sync::{
     RwLock,
     broadcast::{self, Receiver, Sender},
@@ -278,7 +280,11 @@ impl ProjectStore for Sled {
         // Store the new project in relation to a user.
         self.add_user_project(&project.owner.clone(), project)?;
 
-        Ok(key)
+        // Hash the API key to be used as project ID
+        let encryption_key = env::var("TRIGGR_ENCRYPTION_KEY")?;
+        let hashed_key = encrypt(&key, &encryption_key)?;
+
+        Ok(hashed_key)
     }
 
     fn get(&self, key: &str) -> StorageResult<Option<Project>> {
