@@ -2,6 +2,8 @@
 
 // This module contains all the important definitions that have are in a global namespace for Triggr.
 
+#![allow(dead_code)]
+
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -11,6 +13,7 @@ use thiserror::Error;
 use tokio::sync::broadcast::Receiver;
 
 use crate::{chain::Blockchain, storage::Sled, util::CryptoError};
+
 
 /// Errors from internal node operations.
 #[derive(Debug, Error)]

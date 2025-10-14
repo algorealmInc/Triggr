@@ -74,7 +74,7 @@ pub fn encrypt(plaintext: &str, key_base64: &str) -> Result<String, CryptoError>
     let cipher = Aes256Gcm::new(key);
     
     // Generate a random 96-bit nonce (12 bytes)
-    let mut nonce_bytes = generate_nonce::<12>();
+    let nonce_bytes = generate_nonce::<12>();
     let nonce = Nonce::from_slice(&nonce_bytes.as_bytes());
     
     // Encrypt the plaintext

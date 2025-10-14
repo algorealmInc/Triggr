@@ -2,7 +2,7 @@
 
 // This module handles all blockchain operations and interfacing.
 
-mod polkadot;
+pub mod polkadot;
 
 use self::polkadot::Polkadot;
 

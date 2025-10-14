@@ -2,7 +2,10 @@
 
 // Module containing
 
-use crate::server::middleware::Auth;
+use crate::{
+    chain::polkadot::util::{parse_contract_events, SimplifiedEvent},
+    server::middleware::Auth,
+};
 use axum::{
     extract::{Multipart, Path, State},
     http::StatusCode,
@@ -10,7 +13,7 @@ use axum::{
     Json,
 };
 use serde::Serialize;
-use serde_json::json;
+use serde_json::{json, Value};
 use utoipa::ToSchema;
 
 use std::path::PathBuf;
@@ -27,7 +30,10 @@ const CONTRACTS_DIR: &str = "./.data/contracts"; // Use relative path
 #[derive(Serialize, ToSchema)]
 pub struct CreateProjectResponse {
     pub message: String,
+    pub api_key: String,
     pub project: Project,
+    /// The events from the contract metadata
+    pub events: Vec<SimplifiedEvent>,
 }
 
 /// Request schema for Swagger (multipart form)
@@ -222,10 +228,24 @@ pub async fn create_project(
         }
     };
 
+    // Extract event from contract file
+    let events = if let Some(path) = contract_path.to_str() {
+        if let Ok(events) = parse_contract_events(path) {
+            events
+        } else {
+            // Return empty array
+            vec![]
+        }
+    } else {
+        vec![]
+    };
+
     // Return success response
     let response = CreateProjectResponse {
         message: "Project created successfully".to_string(),
+        api_key,
         project,
+        events,
     };
 
     Ok((StatusCode::CREATED, Json(response)))
@@ -271,9 +291,10 @@ pub async fn delete_project(
 pub async fn list_projects(
     State(triggr): State<Triggr>,
     auth: Auth,
-) -> Result<Json<Vec<Project>>, (StatusCode, String)> {
+) -> Result<Json<Value>, (StatusCode, String)> {
     match ProjectStore::get_user_projects(&*triggr.store, &auth.claims.user_id) {
-        Ok(projects) => Ok(Json(projects)),
+        Ok(projects) => Ok(Json(json!({
+            "data": projects }))),
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Failed to list projects: {}", e),

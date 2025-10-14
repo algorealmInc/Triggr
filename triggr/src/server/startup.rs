@@ -1,15 +1,27 @@
 // Copyright (c) 2025, Algorealm Inc.
 
 use super::*;
-use crate::server::routes;
+use crate::{server::routes, chain::polkadot::{Polkadot, prelude::CONTRACTS_NODE_URL}};
 use axum::{routing::get, Extension, Router, http::{Method, self}};
 use tower_http::cors::{CorsLayer, Any};
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, sync::oneshot};
 
 /// Configure the server and get it running.
 pub async fn run() {
     // Initialize shared system state.
     let state = Triggr::new();
+
+    // Connect to PassetHub to listen to chain events
+    let api = Polkadot::connect(CONTRACTS_NODE_URL
+    ).await;
+
+    // Create one-way channel to send decoded event from the listener task to the database
+    let (tx, rx) = oneshot::channel(); 
+
+    // Spin up a task to listen to events
+    tokio::spawn(async move {
+        Polkadot::watch_event(tx, api).await;
+    });
 
     // CORS configuration
     let cors = CorsLayer::new()
