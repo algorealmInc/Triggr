@@ -212,7 +212,7 @@ pub async fn create_project(
     };
 
     // Save to database
-    match triggr.store.create(project.clone()) {
+   let project = match triggr.store.create(project) {
         Ok(key) => key,
         Err(e) => {
             // Clean up uploaded file on database error
