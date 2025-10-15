@@ -273,8 +273,8 @@ pub trait Subscribe {
 /// pluggable — e.g. we can back it with `Sled`, `MemoryStore`,
 /// or even a database like Postgres in the future.
 pub trait ProjectStore: Send + Sync {
-    /// Create a new peoject and return its API key.
-    fn create(&self, project: Project) -> StorageResult<ApiKey>;
+    /// Create a new project
+    fn create(&self, project: Project) -> StorageResult<Project>;
 
     /// Fetch a project by its API key.
     fn get(&self, api_key: &str) -> StorageResult<Option<Project>>;
