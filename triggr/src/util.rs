@@ -1,7 +1,7 @@
 // Copyright (c) 2025, Algorealm Inc.
 
 use base64::{Engine as _, engine::general_purpose};
-use rand::{TryRngCore, rngs::OsRng};
+use rand::{TryRngCore, rngs::OsRng, RngCore};
 
 /// Generate a random nonce.
 ///
@@ -74,8 +74,9 @@ pub fn encrypt(plaintext: &str, key_base64: &str) -> Result<String, CryptoError>
     let cipher = Aes256Gcm::new(key);
     
     // Generate a random 96-bit nonce (12 bytes)
-    let nonce_bytes = generate_nonce::<12>();
-    let nonce = Nonce::from_slice(&nonce_bytes.as_bytes());
+    let mut nonce_bytes = [0u8; 12];
+    rand::rng().fill_bytes(&mut nonce_bytes);
+    let nonce = Nonce::from_slice(&nonce_bytes);
     
     // Encrypt the plaintext
     let ciphertext = cipher
