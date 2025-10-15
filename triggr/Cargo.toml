@@ -27,6 +27,8 @@ aes-gcm = "0.10.3"
 substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git", default-features = false, features = [
     "jsonrpsee-client",
 ] }
+parity-scale-codec = "3.7.5"
+scale-value = "0.18.1"
 
 [features]
 tracing = []

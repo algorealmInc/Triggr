@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use utoipa::ToSchema;
-use std::{string::FromUtf8Error, sync::Arc, env::VarError};
+use std::{string::FromUtf8Error, sync::Arc, env::VarError, collections::HashMap};
 use thiserror::Error;
 use tokio::sync::broadcast::Receiver;
 
@@ -77,6 +77,8 @@ pub struct Triggr {
     pub store: Arc<Sled>,
     /// Supported chains
     pub chains: Arc<Blockchain>,
+    /// High speed cache
+    pub cache: Arc<HighSpeedCache>
 }
 
 impl Triggr {
@@ -88,8 +90,16 @@ impl Triggr {
         Self {
             store: Arc::new(Sled::new()),
             chains: Arc::new(Blockchain::default()),
+            cache: Arc::new(HighSpeedCache::default())
         }
     }
+}
+
+/// High speed cache to retrieve important data quickly
+#[derive(Default)]
+pub struct HighSpeedCache {
+    /// Contract hash -> Contract metadata address on disk
+    pub contract: HashMap<String, String>
 }
 
 /// Trait for managing **documents** inside collections.
