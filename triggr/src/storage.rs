@@ -130,7 +130,7 @@ impl Sled {
             Vec::new()
         };
 
-        // avoid duplicates by checking project.id
+        // Avoid duplicates by checking project.id
         if !projects.iter().any(|p| p.id == project.id) {
             projects.push(project);
         }
@@ -265,9 +265,16 @@ impl DocumentStore for Sled {
 
 // Implement ProjectStore for Sled
 impl ProjectStore for Sled {
-    fn create(&self, project: Project) -> StorageResult<String> {
+    fn create(&self, mut project: Project) -> StorageResult<String> {
         // Generate a random 32-character alphanumeric key.
         let key = util::generate_nonce::<32>();
+
+        // Hash the API key to be used as project ID
+        let encryption_key = env::var("TRIGGR_ENCRYPTION_KEY")?;
+        let hashed_key = encrypt(&key, &encryption_key)?;
+
+        // Update encrypted key
+        project.api_key = hashed_key.clone();
 
         // Serialize the ApiKey for storage in sled
         let bytes = bincode::serialize(&project).map_err(|e| e.to_string())?;
@@ -279,10 +286,6 @@ impl ProjectStore for Sled {
 
         // Store the new project in relation to a user.
         self.add_user_project(&project.owner.clone(), project)?;
-
-        // Hash the API key to be used as project ID
-        let encryption_key = env::var("TRIGGR_ENCRYPTION_KEY")?;
-        let hashed_key = encrypt(&key, &encryption_key)?;
 
         Ok(hashed_key)
     }

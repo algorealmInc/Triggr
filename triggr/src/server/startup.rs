@@ -23,14 +23,20 @@ pub async fn run() {
     // Initialize shared system state.
     let state = Triggr::new();
 
-    // Connect to PassetHub to listen to chain events
-    let api = Polkadot::connect(CONTRACTS_NODE_URL).await;
+    // Create a local task set
+    // let local = tokio::task::LocalSet::new();
+    // local
+    //     .run_until(async {
+    //         // Connect to PassetHub to listen to chain events
+    //         let api = Polkadot::connect(CONTRACTS_NODE_URL).await;
 
-    // Create one-way channel to send decoded event from the listener task to the database
-    // let (tx, rx) = oneshot::channel();
+    //         // Create one-way channel to send decoded event from the listener task to the database
+    //         let (tx, rx) = oneshot::channel();
 
     // Spin up a task to listen to events
-    // tokio::task::spawn(Polkadot::watch_event(api, tx));
+    //         tokio::task::spawn_local(Polkadot::watch_event(api, tx));
+    //     })
+    //     .await;
 
     // CORS configuration
     let cors = CorsLayer::new()
