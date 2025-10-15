@@ -236,6 +236,8 @@ pub struct WsPayload {
 pub struct Project {
     /// Project id
     pub id: String,
+    /// Encrypted api key
+    pub api_key: String,
     /// Project owners id
     pub owner: String,
     // The address of the contracts node. (PassetHub for now)

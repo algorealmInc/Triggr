@@ -30,7 +30,6 @@ const CONTRACTS_DIR: &str = "./.data/contracts"; // Use relative path
 #[derive(Serialize, ToSchema)]
 pub struct CreateProjectResponse {
     pub message: String,
-    pub api_key: String,
     pub project: Project,
     /// The events from the contract metadata
     pub events: Vec<SimplifiedEvent>,
@@ -206,13 +205,14 @@ pub async fn create_project(
     // Construct project
     let project = Project {
         id: project_name.clone(),
+        api_key: String::with_capacity(81),
         owner: auth.claims.user_id.clone(),
         description: description.clone(),
         contract_file_path: contract_path.display().to_string(),
     };
 
     // Save to database
-    let api_key = match triggr.store.create(project.clone()) {
+    match triggr.store.create(project.clone()) {
         Ok(key) => key,
         Err(e) => {
             // Clean up uploaded file on database error
@@ -243,7 +243,6 @@ pub async fn create_project(
     // Return success response
     let response = CreateProjectResponse {
         message: "Project created successfully".to_string(),
-        api_key,
         project,
         events,
     };
