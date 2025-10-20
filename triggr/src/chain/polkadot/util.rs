@@ -2,6 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use scale_value::{Value, ValueDef, Composite, Primitive};
+use serde_json::{json, Value as JsonValue};
 
 /// Full contract metadata structure
 #[derive(Debug, Deserialize)]
@@ -61,4 +63,41 @@ pub fn parse_contract_events(json_str: &str) -> Result<Vec<SimplifiedEvent>, ser
         .collect();
     
     Ok(simplified_events)
+}
+
+// Extract bytes from nested structure (handles arrays wrapping byte arrays)
+pub fn extract_bytes_from_nested(value: &Value<u32>) -> Option<Vec<u8>> {
+    match &value.value {
+        ValueDef::Composite(Composite::Unnamed(fields)) => {
+            // If it's a single-element array, unwrap it
+            if fields.len() == 1 {
+                return extract_bytes_from_nested(&fields[0]);
+            }
+            
+            // Check if this is a byte array
+            if is_byte_array(fields) {
+                let bytes: Vec<u8> = fields.iter().filter_map(|v| {
+                    if let ValueDef::Primitive(Primitive::U128(n)) = &v.value {
+                        if *n <= 255 {
+                            return Some(*n as u8);
+                        }
+                    }
+                    None
+                }).collect();
+                
+                if bytes.len() == fields.len() {
+                    return Some(bytes);
+                }
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
+
+fn is_byte_array(fields: &[Value<u32>]) -> bool {
+    !fields.is_empty() && fields.iter().all(|v| {
+        matches!(&v.value, ValueDef::Primitive(Primitive::U128(n)) if *n <= 255)
+    })
 }

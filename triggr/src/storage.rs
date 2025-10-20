@@ -8,12 +8,20 @@ use crate::util::encrypt;
 
 use super::*;
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use sled::{Db, IVec};
-use std::{collections::HashMap, fs, path::Path, sync::Arc, env};
+use std::{collections::HashMap, env, fs, path::Path, sync::Arc};
 use tokio::sync::{
-    RwLock,
     broadcast::{self, Receiver, Sender},
+    RwLock,
 };
+
+/// Metadata database entry
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Metadata {
+    pub hash: String,
+    pub path: String,
+}
 
 /// Subscriptions to track topics and help broadcast database changes to clients.
 #[derive(Clone, Default)]
@@ -87,6 +95,8 @@ pub struct Sled {
     pub app: Arc<Db>,
     /// Users store
     pub users: Arc<Db>,
+    /// Contract metadata store
+    pub metadata: Arc<Db>,
     /// Subscription mechanism
     pub subscriptions: DbSubscriptions,
 }
@@ -100,25 +110,29 @@ impl Sled {
             std::env::var("TRIGGR_DB_PATH_APP").unwrap_or_else(|_| DEFAULT_DB_PATH_APP.to_string());
         let users_path = std::env::var("TRIGGR_DB_PATH_USERS")
             .unwrap_or_else(|_| DEFAULT_DB_PATH_USERS.to_string());
+        let meta_path = std::env::var("TRIGGR_DB_PATH_METADATA")
+            .unwrap_or_else(|_| DEFAULT_DB_PATH_METADATA.to_string());
 
         // Open or create storage directory
         fs::create_dir_all(&projects_path).expect(&format!("Failed to create {}", projects_path));
         fs::create_dir_all(&app_path).expect(&format!("Failed to create {}", app_path));
         fs::create_dir_all(&users_path).expect(&format!("Failed to create {}", users_path));
+        fs::create_dir_all(&meta_path).expect(&format!("Failed to create {}", meta_path));
 
         // Initialize database
         let projects_db =
             ::sled::open(Path::new(&projects_path)).expect("Failed to open sled database");
         let app_db = ::sled::open(Path::new(&app_path)).expect("Failed to open sled database");
         let users_db = ::sled::open(Path::new(&users_path)).expect("Failed to open sled database");
+        let meta_db = ::sled::open(Path::new(&meta_path)).expect("Failed to open sled database");
 
-        let db = Self {
+        Self {
             projects: Arc::new(projects_db),
             app: Arc::new(app_db),
             users: Arc::new(users_db),
+            metadata: Arc::new(meta_db),
             subscriptions: DbSubscriptions::default(),
-        };
-        db
+        }
     }
 
     /// Helper function that receives a user ID and stores the API keys
@@ -140,6 +154,84 @@ impl Sled {
         self.users.insert(user_id, encoded)?;
 
         Ok(())
+    }
+
+    /// Helper function to store all metadata paths as a whole into the db.
+    pub fn store_metadata_paths(&self, path: &str) -> StorageResult<()> {
+        const KEY: &str = "HANNAH";
+
+        // Fetch existing list
+        let mut paths: Vec<String> = if let Some(bytes) = self.metadata.get(KEY)? {
+            bincode::deserialize(&bytes).unwrap_or_default()
+        } else {
+            vec![]
+        };
+
+        // Add only if not already present
+        if !paths.contains(&path.to_string()) {
+            paths.push(path.to_string());
+        }
+
+        // Serialize and store updated list
+        let bytes = bincode::serialize(&paths)
+            .map_err(|e| format!("Failed to serialize metadata paths: {}", e))?;
+
+        self.metadata.insert(KEY, bytes)?;
+        self.metadata.flush()?; // ensure persistence
+
+        Ok(())
+    }
+
+    pub fn get_metadata_paths(&self) -> StorageResult<Vec<String>> {
+        const KEY: &str = "HANNAH";
+        if let Some(bytes) = self.metadata.get(KEY)? {
+            Ok(bincode::deserialize(&bytes).unwrap_or_default())
+        } else {
+            Ok(vec![])
+        }
+    }
+
+    /// Store or update unique (hash, path) entries under a single key ("HANNAH")
+    pub fn store_metadata_entry(&self, hash: &str, path: &str) -> StorageResult<()> {
+        const KEY: &str = "HANNAH";
+
+        // Fetch existing entries (or start with an empty vector)
+        let mut entries: Vec<Metadata> = if let Some(bytes) = self.metadata.get(KEY)? {
+            bincode::deserialize(&bytes).unwrap_or_default()
+        } else {
+            vec![]
+        };
+
+        // Check if an entry with the same hash already exists
+        if !entries.iter().any(|e| e.hash == hash) {
+            entries.push(Metadata {
+                hash: hash.to_string(),
+                path: path.to_string(),
+            });
+        }
+
+        // Serialize updated entries
+        let bytes = bincode::serialize(&entries)
+            .map_err(|e| format!("Failed to serialize entries: {}", e))?;
+
+        // Store and flush
+        self.metadata.insert(KEY, bytes)?;
+        self.metadata.flush()?; // persist immediately
+
+        Ok(())
+    }
+
+    /// Retrieve all stored entries
+    pub fn get_metadata_entries(&self) -> StorageResult<Vec<Metadata>> {
+        const KEY: &str = "HANNAH";
+
+        if let Some(bytes) = self.metadata.get(KEY)? {
+            let entries: Vec<Metadata> = bincode::deserialize(&bytes)
+                .map_err(|e| format!("Failed to deserialize entries: {}", e))?;
+            Ok(entries)
+        } else {
+            Ok(vec![])
+        }
     }
 }
 
@@ -265,7 +357,7 @@ impl DocumentStore for Sled {
 
 // Implement ProjectStore for Sled
 impl ProjectStore for Sled {
-    fn create(&self, mut project: Project) -> StorageResult<Project> {
+    fn create(&self, project: &mut Project) -> StorageResult<()> {
         // Generate a random 32-character alphanumeric key.
         let key = util::generate_nonce::<32>();
 
@@ -287,7 +379,7 @@ impl ProjectStore for Sled {
         // Store the new project in relation to a user.
         self.add_user_project(&project.owner.clone(), project.clone())?;
 
-        Ok(project)
+        Ok(())
     }
 
     fn get(&self, key: &str) -> StorageResult<Option<Project>> {

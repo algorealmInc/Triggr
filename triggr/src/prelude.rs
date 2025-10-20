@@ -7,13 +7,16 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use utoipa::ToSchema;
-use std::{string::FromUtf8Error, sync::Arc, env::VarError, collections::HashMap};
+use std::{collections::HashMap, env::VarError, string::FromUtf8Error, sync::Arc};
 use thiserror::Error;
-use tokio::sync::broadcast::Receiver;
+use tokio::sync::{broadcast::Receiver, Mutex, RwLock};
+use utoipa::ToSchema;
 
-use crate::{chain::Blockchain, storage::Sled, util::CryptoError};
-
+use crate::{
+    chain::{polkadot::decode::ContractMetadata, Blockchain},
+    storage::Sled,
+    util::CryptoError,
+};
 
 /// Errors from internal node operations.
 #[derive(Debug, Error)]
@@ -67,6 +70,12 @@ pub static DEFAULT_DB_PATH_APP: &str = "./.data/app";
 /// Default path to database storage for application data.
 pub static DEFAULT_DB_PATH_USERS: &str = "./.data/users";
 
+/// Default path to database storage for contract metadata addresses.
+pub static DEFAULT_DB_PATH_METADATA: &str = "./.data/metadata";
+
+/// Contracts file directory
+pub const CONTRACTS_DIR: &str = "./.data/contracts";
+
 /// The API key type
 pub type ApiKey = String;
 
@@ -78,7 +87,7 @@ pub struct Triggr {
     /// Supported chains
     pub chains: Arc<Blockchain>,
     /// High speed cache
-    pub cache: Arc<HighSpeedCache>
+    pub cache: Arc<RwLock<HighSpeedCache>>,
 }
 
 impl Triggr {
@@ -87,19 +96,51 @@ impl Triggr {
         use dotenvy::dotenv;
         dotenv().ok(); // load from .env
 
-        Self {
+        let triggr = Self {
             store: Arc::new(Sled::new()),
             chains: Arc::new(Blockchain::default()),
-            cache: Arc::new(HighSpeedCache::default())
+            cache: Arc::new(RwLock::new(HighSpeedCache::default())),
+        };
+
+        // Load metadata into cache
+        let mut cache = HighSpeedCache::default();
+        cache.init_contract_metadata(triggr.store.clone());
+
+        Triggr {
+            cache: Arc::new(RwLock::new(cache)),
+            ..triggr
         }
     }
 }
 
-/// High speed cache to retrieve important data quickly
+/// High speed cache to retrieve important data quickly.
 #[derive(Default)]
 pub struct HighSpeedCache {
     /// Contract hash -> Contract metadata address on disk
-    pub contract: HashMap<String, String>
+    pub contract: HashMap<String, ContractMetadata>,
+}
+
+impl HighSpeedCache {
+    /// Load contract metadata into cache.
+    pub fn init_contract_metadata(&mut self, store: Arc<Sled>) {
+        // Get metadata entries
+        if let Ok(meta_entries) = store.get_metadata_entries() {
+            for meta in meta_entries {
+                if let Ok(metadata) = self.load_n_serialize(&meta.path) {
+                    self.contract.insert(meta.hash, metadata);
+                }
+            }
+        }
+    }
+
+    /// Helper function to load and serialize metadata.
+    pub fn load_n_serialize(&mut self, path: &str) -> StorageResult<ContractMetadata> {
+        // Read metadata content
+        let metadata_json = std::fs::read_to_string(path)?;
+
+        // Return metadata
+        Ok(serde_json::from_str::<ContractMetadata>(&metadata_json)?)
+    }
 }
 
 /// Trait for managing **documents** inside collections.
@@ -274,7 +315,7 @@ pub trait Subscribe {
 /// or even a database like Postgres in the future.
 pub trait ProjectStore: Send + Sync {
     /// Create a new project
-    fn create(&self, project: Project) -> StorageResult<Project>;
+    fn create(&self, project: &mut Project) -> StorageResult<()>;
 
     /// Fetch a project by its API key.
     fn get(&self, api_key: &str) -> StorageResult<Option<Project>>;

@@ -1,17 +1,19 @@
 // Copyright (c) 2025, Algorealm Inc.
 
+use futures::channel::oneshot::Sender;
 use scale_value::{Composite, Primitive, Value, ValueDef};
 use serde_json::{json, Value as JsonValue};
 use substrate_api_client::{
     ac_primitives::DefaultRuntimeConfig, rpc::JsonrpseeClient, Api, SubscribeEvents,
 };
-use futures::channel::oneshot::Sender;
 
 pub mod decode;
 pub mod prelude;
 pub mod util;
 
 use prelude::*;
+
+use crate::{chain::polkadot::util::extract_bytes_from_nested, prelude::Triggr};
 
 /// Interface to handle all operations relating to the Polkadot chain.
 #[derive(Clone, Default, Debug)]
@@ -37,6 +39,7 @@ impl Polkadot {
     pub async fn watch_event(
         api: Api<DefaultRuntimeConfig, JsonrpseeClient>,
         tx: Sender<EventData>,
+        triggr: Triggr,
     ) {
         // Subscribe to events
         let mut sub = api
@@ -65,17 +68,39 @@ impl Polkadot {
                                     Ok(fields) => {
                                         let field_vec: Vec<&Value<u32>> = fields.values().collect();
 
-                                        // // Extract contract address (first field) and event data (second field)
-                                        // if field_vec.len() >= 2 {
-                                        //     if let Some(contract_address) = extract_bytes_from_nested(&field_vec[0]) {
-                                        //         if let Some(event_bytes) = extract_bytes_from_nested(&field_vec[1]) {
-                                        //             println!("   📍 Contract Address: 0x{}", hex::encode(&contract_address));
-                                        //             println!("   📦 Event Data (hex): 0x{}", hex::encode(&event_bytes));
-                                        //             println!("   📦 Decoded Event:");
-                                        //             decode_contract_event_with_metadata(&event_bytes, &metadata);
-                                        //         }
-                                        //     }
-                                        // }
+                                        // Extract contract address (first field) and event data (second field)
+                                        if field_vec.len() >= 2 {
+                                            if let Some(contract_address) =
+                                                extract_bytes_from_nested(&field_vec[0])
+                                            {
+                                                if let Some(event_bytes) =
+                                                    extract_bytes_from_nested(&field_vec[1])
+                                                {
+                                                    let addr_bytes = hex::encode(&contract_address);
+
+                                                    println!(
+                                                        "   📍 Contract Address: 0x{}",
+                                                        hex::encode(&contract_address)
+                                                    );
+                                                    println!(
+                                                        "   📦 Event Data (hex): 0x{}",
+                                                        hex::encode(&event_bytes)
+                                                    );
+
+                                                    // Only try to decode contracts we care about
+                                                    let cache = triggr.cache.read().await;
+                                                    if let Some(metadata) =
+                                                        cache.contract.get(&addr_bytes)
+                                                    {
+                                                        // Decode contract event
+                                                        // decode_contract_event_with_metadata(
+                                                        //     &event_bytes,
+                                                        //     metadata,
+                                                        // );
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                     Err(e) => {
                                         eprintln!("   ❌ Could not decode fields: {:?}", e);
