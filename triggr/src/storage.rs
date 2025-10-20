@@ -405,20 +405,34 @@ impl ProjectStore for Sled {
         else {
             return Err(format!("Project with key {} not found", key).into());
         };
-
+    
         // Deserialize the project
         let project: Project = bincode::deserialize(&bytes).map_err(|e| e.to_string())?;
-
+    
         // Verify ownership
         if project.owner != owner {
             return Err("Unauthorized: owner mismatch".into());
         }
-
+    
         // Delete the project
         self.projects
             .remove(key.as_bytes())
             .map_err(|e| e.to_string())?;
-
+    
+        // Load user projects
+        let mut projects: Vec<Project> = if let Some(value) = self.users.get(owner.as_bytes())? {
+            bincode::deserialize(&value).map_err(|e| format!("Deserialization error: {e}"))?
+        } else {
+            Vec::new()
+        };
+    
+        // Filter out the deleted project
+        projects.retain(|p| p.id != project.id);
+    
+        // Serialize and save the updated list
+        let serialized = bincode::serialize(&projects).map_err(|e| e.to_string())?;
+        self.users.insert(owner.as_bytes(), serialized)?;
+    
         Ok(())
     }
 
