@@ -7,10 +7,10 @@ use crate::{
     server::middleware::RefProject,
 };
 use axum::{
-    Json,
     extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
+    Json,
 };
 use serde_json::json;
 
@@ -76,7 +76,12 @@ pub async fn list_collections(
     ref_project: RefProject,
 ) -> Result<impl IntoResponse, AppError> {
     let cols = triggr.store.list_collections(&ref_project.project.id)?;
-    Ok((StatusCode::OK, Json(cols)))
+    Ok((
+        StatusCode::OK,
+        Json(json!({
+            "data": cols
+        })),
+    ))
 }
 
 /// Insert a new document
