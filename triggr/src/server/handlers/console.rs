@@ -5,6 +5,7 @@
 use crate::{
     chain::polkadot::util::{parse_contract_events, SimplifiedEvent},
     server::middleware::Auth,
+    util::decrypt,
 };
 use axum::{
     extract::{Multipart, Path, State},
@@ -16,7 +17,7 @@ use serde::Serialize;
 use serde_json::{json, Value};
 use utoipa::ToSchema;
 
-use std::path::PathBuf;
+use std::{env, path::PathBuf};
 use tokio::io::AsyncWriteExt;
 
 use super::{db::AppError, *};
@@ -232,7 +233,6 @@ pub async fn create_project(
         }
     };
 
-
     // Extract event from contract file
     let events = if let Some(path) = contract_path.to_str() {
         if let Ok(events) = parse_contract_events(path) {
@@ -272,8 +272,14 @@ pub async fn delete_project(
     Path(api_key): Path<String>,
     auth: Auth,
 ) -> Result<impl IntoResponse, AppError> {
+    // Get API Key from public cypher id
+    let encryption_key = env::var("TRIGGR_ENCRYPTION_KEY")
+        .or_else(|_| Err(AppError::NotFound("Project not found".into())))?;
+    let decrypted_key = &decrypt(&api_key, &encryption_key)
+        .or_else(|_| Err(AppError::NotFound("Project not found".into())))?;
+
     // Use id to delete project
-    let _ = ProjectStore::delete(&*triggr.store, &api_key, &auth.claims.user_id)?;
+    let _ = ProjectStore::delete(&*triggr.store, &decrypted_key, &auth.claims.user_id)?;
 
     Ok(Json(json!({
         "message": "Project deleted successfully."
