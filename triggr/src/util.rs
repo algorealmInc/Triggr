@@ -131,6 +131,9 @@ pub fn decrypt(encrypted_base64: &str, key_base64: &str) -> Result<String, Crypt
         .map_err(|_| CryptoError::DecryptionFailed)?;
     
     // Convert bytes to string
-    String::from_utf8(plaintext_bytes)
-        .map_err(|_| CryptoError::DecryptionFailed)
+    let str = String::from_utf8(plaintext_bytes)
+        .map_err(|_| CryptoError::DecryptionFailed)?;
+
+    // Replace all "/" with "_"
+    Ok(str.replace("/", "_"))
 }
