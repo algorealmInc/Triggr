@@ -38,7 +38,7 @@ pub fn console_routes() -> Router<Triggr> {
         .route("/api/console/login", get(console::login))
         .route("/api/console/project", post(console::create_project))
         .route(
-            "/api/console/project/{api_key}",
+            "/api/console/project/{project_id}",
             delete(console::delete_project),
         )
         .route("/api/console/projects", get(console::list_projects))

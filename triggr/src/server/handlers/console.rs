@@ -24,9 +24,6 @@ use super::{db::AppError, *};
 /// Max uploadable file size
 const MAX_FILE_SIZE: usize = 10 * 1024 * 1024; // 10MB
 
-/// Contracts file directory
-const CONTRACTS_DIR: &str = "./.data/contracts"; // Use relative path
-
 #[derive(Serialize, ToSchema)]
 pub struct CreateProjectResponse {
     pub message: String,
@@ -203,16 +200,23 @@ pub async fn create_project(
         .ok_or_else(|| AppError::BadRequest("Missing contracts_json file".to_string()))?;
 
     // Construct project
-    let project = Project {
+    let mut project = Project {
         id: project_name.clone(),
-        api_key: String::with_capacity(81),
+        api_key: String::with_capacity(32),
         owner: auth.claims.user_id.clone(),
         description: description.clone(),
         contract_file_path: contract_path.display().to_string(),
     };
 
+    // Add metadata content to high speed cache
+    if let Some(path_str) = contract_path.to_str() {
+        // Acquire cache lock
+        let mut cache = triggr.cache.write().await;
+        cache.load_n_serialize(path_str)?;
+    }
+
     // Save to database
-   let project = match triggr.store.create(project) {
+    match triggr.store.create(&mut project) {
         Ok(key) => key,
         Err(e) => {
             // Clean up uploaded file on database error
@@ -227,6 +231,7 @@ pub async fn create_project(
             )));
         }
     };
+
 
     // Extract event from contract file
     let events = if let Some(path) = contract_path.to_str() {
