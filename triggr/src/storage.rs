@@ -287,11 +287,19 @@ impl DocumentStore for Sled {
     async fn delete(&self, project_id: &str, collection: &str, id: &str) -> StorageResult<()> {
         let key = <Self as DocumentStore>::key(project_id, collection, id);
 
+
         // Delete and returns the old value (if any)
         let old_value = self
             .app
             .remove(&key)?
             .map(|ivec| String::from_utf8_lossy(&ivec).to_string());
+
+        if old_value.is_none() {
+            eprintln!("⚠️ No value found for key: {}", key);
+        } else {
+            eprintln!("✅ Deleted key: {}", key);
+        }
+        
 
         // Only use the old value to notify subscribers, not in the publish API
         if let Some(doc) = old_value {
