@@ -207,5 +207,5 @@ pub async fn delete_document(
         .store
         .delete(&ref_project.project.id, &name, &id)
         .await?;
-    Ok((StatusCode::NO_CONTENT, "".into_response()))
+    Ok((StatusCode::OK, Json(json!({ "ok": true }))))
 }
