@@ -97,6 +97,7 @@ impl Polkadot {
                                                         //     &event_bytes,
                                                         //     metadata,
                                                         // );
+                                                        println!("{:#?} {:?}", metadata, event_bytes);
                                                     }
                                                 }
                                             }

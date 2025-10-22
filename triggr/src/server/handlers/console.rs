@@ -38,7 +38,7 @@ pub struct CreateProjectResponse {
 pub struct ProjectCreateForm {
     pub project_name: String,
     pub description: String,
-    pub contract_hash: String,
+    pub contract_addr: String,
     #[schema(value_type = String, format = Binary)]
     pub contracts_json: Vec<u8>,
 }
@@ -81,7 +81,7 @@ pub async fn create_project(
 ) -> Result<(StatusCode, Json<CreateProjectResponse>), AppError> {
     let mut project_name: Option<String> = None;
     let mut description: Option<String> = None;
-    let mut contract_hash: Option<String> = None;
+    let mut contract_addr: Option<String> = None;
     let mut contract_file_path: Option<PathBuf> = None;
 
     // Ensure contracts directory exists
@@ -122,7 +122,7 @@ pub async fn create_project(
                         .to_string(),
                 );
             }
-            "contract_hash" => {
+            "contract_addr" => {
                 let hash = field.text().await.unwrap_or_else(|_| String::new());
 
                 // Validate hash format (alphanumeric only)
@@ -132,13 +132,13 @@ pub async fn create_project(
                     ));
                 }
 
-                contract_hash = Some(hash);
+                contract_addr = Some(hash);
             }
             "contracts_json" => {
-                // Ensure we have contract_hash before processing file
-                let hash = contract_hash.as_ref().ok_or_else(|| {
+                // Ensure we have contract_addr before processing file
+                let hash = contract_addr.as_ref().ok_or_else(|| {
                     AppError::BadRequest(
-                        "contract_hash must be provided before contracts_json".to_string(),
+                        "contract_addr must be provided before contracts_json".to_string(),
                     )
                 })?;
 
@@ -194,8 +194,8 @@ pub async fn create_project(
     let description =
         description.ok_or_else(|| AppError::BadRequest("Missing description".to_string()))?;
 
-    let _contract_hash =
-        contract_hash.ok_or_else(|| AppError::BadRequest("Missing contract_hash".to_string()))?;
+    let _contract_addr =
+        contract_addr.ok_or_else(|| AppError::BadRequest("Missing contract_addr".to_string()))?;
 
     let contract_path = contract_file_path
         .ok_or_else(|| AppError::BadRequest("Missing contracts_json file".to_string()))?;
