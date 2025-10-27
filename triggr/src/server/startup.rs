@@ -32,7 +32,7 @@ pub async fn run() {
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
-        .allow_headers([http::header::AUTHORIZATION, http::header::CONTENT_TYPE]);
+        .allow_headers(Any);
 
     // Server configuration
     let app = Router::new()
