@@ -39,10 +39,16 @@ pub fn console_routes() -> Router<Triggr> {
         .route("/api/console/project", post(console::create_project))
         .route(
             "/api/console/project/{project_id}",
-            delete(console::delete_project),
+            get(console::get_project).delete(console::delete_project),
         )
         .route("/api/console/projects", get(console::list_projects))
 }
+
+/// Returns routes to handle console requests concerning triggers.
+// pub fn trigger_routes() -> Router<Triggr> {
+//     Router::new()
+//         .route("/api/trigger/create", post(trigger::create_trigger))
+// }
 
 /// Returns the 'ws' route.
 pub fn ws_route() -> Router<Triggr> {

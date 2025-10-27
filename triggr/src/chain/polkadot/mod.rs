@@ -1,11 +1,10 @@
 // Copyright (c) 2025, Algorealm Inc.
 
-use futures::channel::oneshot::Sender;
-use scale_value::{Composite, Primitive, Value, ValueDef};
-use serde_json::{json, Value as JsonValue};
+use scale_value::Value;
 use substrate_api_client::{
     ac_primitives::DefaultRuntimeConfig, rpc::JsonrpseeClient, Api, SubscribeEvents,
 };
+use tokio::sync::mpsc::Sender;
 
 pub mod decode;
 pub mod prelude;
@@ -13,7 +12,7 @@ pub mod util;
 
 use prelude::*;
 
-use crate::{chain::polkadot::util::extract_bytes_from_nested, prelude::Triggr};
+use crate::{chain::polkadot::util::*, prelude::Triggr};
 
 /// Interface to handle all operations relating to the Polkadot chain.
 #[derive(Clone, Default, Debug)]
@@ -76,7 +75,10 @@ impl Polkadot {
                                                 if let Some(event_bytes) =
                                                     extract_bytes_from_nested(&field_vec[1])
                                                 {
-                                                    let addr_bytes = hex::encode(&contract_address);
+                                                    let addr_bytes = format!(
+                                                        "0x{}",
+                                                        hex::encode(&contract_address)
+                                                    );
 
                                                     println!(
                                                         "   📍 Contract Address: 0x{}",
@@ -93,11 +95,11 @@ impl Polkadot {
                                                         cache.contract.get(&addr_bytes)
                                                     {
                                                         // Decode contract event
-                                                        // decode_contract_event_with_metadata(
-                                                        //     &event_bytes,
-                                                        //     metadata,
-                                                        // );
-                                                        println!("{:#?} {:?}", metadata, event_bytes);
+                                                        decode_contract_event_with_metadata(
+                                                            tx.clone(),
+                                                            &event_bytes,
+                                                            metadata,
+                                                        ).await;
                                                     }
                                                 }
                                             }

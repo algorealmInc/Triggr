@@ -10,7 +10,7 @@ use axum::{
     routing::get,
     Extension, Router,
 };
-use futures::channel::oneshot;
+use tokio::sync::mpsc;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 
@@ -20,7 +20,10 @@ pub async fn run() {
     let state = Triggr::new();
 
     // Create one-way channel to send decoded event from the listener task to the database
-    let (tx, rx) = oneshot::channel();
+    let (tx, rx) = mpsc::channel(100);
+
+    // Spin up a task to listen to blockchain events and execute triggers configure for them
+    tokio::task::spawn(handle_chain_events(rx));
 
     // Create LocalSet for !Send futures
     let local = tokio::task::LocalSet::new();
