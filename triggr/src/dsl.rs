@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
+use crate::chain::polkadot::prelude::EventData;
+
 /// Dsl Event Definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventDefinition {
@@ -61,13 +63,6 @@ pub struct Rule {
 pub struct Script {
     pub events: Vec<EventDefinition>,
     pub rules: Vec<Rule>,
-}
-
-/// Runtime event data
-#[derive(Debug, Clone)]
-pub struct EventData {
-    pub event_name: String,
-    pub fields: HashMap<String, Value>,
 }
 
 /// Simple Dsl Parser

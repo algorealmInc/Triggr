@@ -5,13 +5,9 @@ use crate::{
     chain::polkadot::{prelude::CONTRACTS_NODE_URL, Polkadot},
     server::routes,
 };
-use axum::{
-    http::{self, Method},
-    routing::get,
-    Extension, Router,
-};
-use tokio::sync::mpsc;
+use axum::{http::Method, routing::get, Extension, Router};
 use tokio::net::TcpListener;
+use tokio::sync::mpsc;
 use tower_http::cors::{Any, CorsLayer};
 
 /// Configure the server and get it running.
@@ -23,7 +19,7 @@ pub async fn run() {
     let (tx, rx) = mpsc::channel(100);
 
     // Spin up a task to listen to blockchain events and execute triggers configure for them
-    tokio::task::spawn(handle_chain_events(rx));
+    tokio::task::spawn(handle_chain_events(state.clone(), rx));
 
     // Create LocalSet for !Send futures
     let local = tokio::task::LocalSet::new();

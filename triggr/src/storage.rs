@@ -4,7 +4,7 @@
 // We are using sled for the internal database storage. This is because it is fast and composable in a single binary.
 // No external (network) dependencies.
 
-use crate::{dsl::Rule, util::encrypt};
+use crate::util::encrypt;
 
 use super::*;
 use async_trait::async_trait;
@@ -429,18 +429,22 @@ impl TriggerStore for Sled {
         let mut triggers: Vec<Trigger> = self
             .triggers
             .get(key)?
-            .map(|bytes| bincode::deserialize(&bytes).map_err(|e| StorageError::Other(e.to_string())))
+            .map(|bytes| {
+                bincode::deserialize(&bytes).map_err(|e| StorageError::Other(e.to_string()))
+            })
             .transpose()?
             .unwrap_or_default();
 
-        // Insert only if the same id doesn’t already exist
-        if !triggers.iter().any(|t| t.id == trigger.id) {
+         // Add or replace trigger with same ID
+         if let Some(existing) = triggers.iter_mut().find(|t| t.id == trigger.id) {
+            *existing = trigger;
+        } else {
             triggers.push(trigger);
         }
 
         // Serialize and store back
-        let encoded = bincode::serialize(&triggers)
-            .map_err(|e| StorageError::Other(e.to_string()))?;
+        let encoded =
+            bincode::serialize(&triggers).map_err(|e| StorageError::Other(e.to_string()))?;
         self.triggers.insert(key, encoded)?;
         self.triggers.flush()?;
         Ok(())
@@ -450,40 +454,44 @@ impl TriggerStore for Sled {
     fn get_trigger(&self, contract_addr: &str, name: &str) -> StorageResult<Trigger> {
         let key = contract_addr.as_bytes();
 
-        let bytes = self
-            .triggers
-            .get(key)?
-            .ok_or_else(|| StorageError::NotFound(format!("No triggers found for contract {contract_addr}")))?;
+        let bytes = self.triggers.get(key)?.ok_or_else(|| {
+            StorageError::NotFound(format!("No triggers found for contract {contract_addr}"))
+        })?;
 
         let triggers: Vec<Trigger> =
             bincode::deserialize(&bytes).map_err(|e| StorageError::Other(e.to_string()))?;
 
-        triggers
-            .into_iter()
-            .find(|t| t.id == name)
-            .ok_or_else(|| StorageError::NotFound(format!("No trigger with id {name} for {contract_addr}")))
+        triggers.into_iter().find(|t| t.id == name).ok_or_else(|| {
+            StorageError::NotFound(format!("No trigger with id {name} for {contract_addr}"))
+        })
     }
 
     /// Update active/inactive state of a specific trigger.
-    fn set_trigger_state(&self, contract_addr: &str, trigger_id: &str, active: bool) -> StorageResult<()> {
+    fn set_trigger_state(
+        &self,
+        contract_addr: &str,
+        trigger_id: &str,
+        active: bool,
+    ) -> StorageResult<()> {
         let key = contract_addr.as_bytes();
 
-        let bytes = self
-            .triggers
-            .get(key)?
-            .ok_or_else(|| StorageError::NotFound(format!("No triggers found for contract {contract_addr}")))?;
+        let bytes = self.triggers.get(key)?.ok_or_else(|| {
+            StorageError::NotFound(format!("No triggers found for contract {contract_addr}"))
+        })?;
 
         let mut triggers: Vec<Trigger> =
             bincode::deserialize(&bytes).map_err(|e| StorageError::Other(e.to_string()))?;
 
         let Some(trigger) = triggers.iter_mut().find(|t| t.id == trigger_id) else {
-            return Err(StorageError::NotFound(format!("Trigger {trigger_id} not found")));
+            return Err(StorageError::NotFound(format!(
+                "Trigger {trigger_id} not found"
+            )));
         };
 
         trigger.active = active;
 
-        let encoded = bincode::serialize(&triggers)
-            .map_err(|e| StorageError::Other(e.to_string()))?;
+        let encoded =
+            bincode::serialize(&triggers).map_err(|e| StorageError::Other(e.to_string()))?;
         self.triggers.insert(key, encoded)?;
         self.triggers.flush()?;
         Ok(())
@@ -493,10 +501,9 @@ impl TriggerStore for Sled {
     fn delete_trigger(&self, contract_addr: &str, trigger_id: &str) -> StorageResult<()> {
         let key = contract_addr.as_bytes();
 
-        let bytes = self
-            .triggers
-            .get(key)?
-            .ok_or_else(|| StorageError::NotFound(format!("No triggers found for contract {contract_addr}")))?;
+        let bytes = self.triggers.get(key)?.ok_or_else(|| {
+            StorageError::NotFound(format!("No triggers found for contract {contract_addr}"))
+        })?;
 
         let mut triggers: Vec<Trigger> =
             bincode::deserialize(&bytes).map_err(|e| StorageError::Other(e.to_string()))?;
@@ -510,8 +517,8 @@ impl TriggerStore for Sled {
             )));
         }
 
-        let encoded = bincode::serialize(&triggers)
-            .map_err(|e| StorageError::Other(e.to_string()))?;
+        let encoded =
+            bincode::serialize(&triggers).map_err(|e| StorageError::Other(e.to_string()))?;
         self.triggers.insert(key, encoded)?;
         self.triggers.flush()?;
         Ok(())

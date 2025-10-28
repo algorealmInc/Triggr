@@ -37,7 +37,7 @@ impl Polkadot {
     /// Watch event and decode it before sending it to database layer.
     pub async fn watch_event(
         api: Api<DefaultRuntimeConfig, JsonrpseeClient>,
-        tx: Sender<EventData>,
+        tx: Sender<(String, EventData)>,
         triggr: Triggr,
     ) {
         // Subscribe to events
@@ -82,7 +82,7 @@ impl Polkadot {
 
                                                     println!(
                                                         "   📍 Contract Address: 0x{}",
-                                                        hex::encode(&contract_address)
+                                                        addr_bytes
                                                     );
                                                     println!(
                                                         "   📦 Event Data (hex): 0x{}",
@@ -97,9 +97,11 @@ impl Polkadot {
                                                         // Decode contract event
                                                         decode_contract_event_with_metadata(
                                                             tx.clone(),
+                                                            addr_bytes,
                                                             &event_bytes,
                                                             metadata,
-                                                        ).await;
+                                                        )
+                                                        .await;
                                                     }
                                                 }
                                             }

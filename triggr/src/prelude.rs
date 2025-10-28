@@ -5,14 +5,23 @@
 #![allow(dead_code)]
 
 use async_trait::async_trait;
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::{collections::HashMap, env::VarError, string::FromUtf8Error, sync::Arc};
 use thiserror::Error;
-use tokio::sync::{RwLock, mpsc::Receiver};
+use tokio::sync::{mpsc::Receiver, RwLock};
 use utoipa::ToSchema;
 
-use crate::{chain::{Blockchain, polkadot::{util::ContractMetadata, prelude::EventData}}, storage::Sled, util::CryptoError, dsl::Rule};
+use crate::{
+    chain::{
+        polkadot::{prelude::EventData, util::ContractMetadata},
+        Blockchain,
+    },
+    dsl::{Action, DslExecutor, Rule},
+    storage::Sled,
+    util::CryptoError,
+};
 
 /// Errors from internal node operations.
 #[derive(Debug, Error)]
@@ -318,8 +327,103 @@ pub trait ProjectStore: Send + Sync {
 }
 
 /// Function to handle blockchain events and execute triggers.
-pub async fn handle_chain_events(rx: Receiver<EventData>) {
-    
+pub async fn handle_chain_events(triggr: Triggr, mut rx: Receiver<(String, EventData)>) {
+    // Recieve stream data
+    while let Some((contract_addr, event_data)) = rx.recv().await {
+        // Load triggers from db
+        if let Ok(triggers) = TriggerStore::list_triggers(&*triggr.store, &contract_addr) {
+            // Filter triggers based on event name
+            let triggers = triggers
+                .iter()
+                .filter(|t| t.rules.iter().any(|r| r.event_name == contract_addr))
+                .cloned()
+                .collect::<Vec<Trigger>>();
+
+            // Execute tiggers
+            for trigger in triggers {
+                tokio::task::spawn(execute_trigger(triggr.clone(), contract_addr.clone(), trigger, event_data.clone()));
+            }
+        }
+    }
+}
+
+/// Function to execute trigger.
+async fn execute_trigger(triggr: Triggr, contract_addr: String, mut trigger: Trigger, event: EventData) {
+    // Get actions to execute
+    let actions = trigger
+        .rules
+        .iter()
+        .filter_map(|rule| DslExecutor::execute_rule(rule, &event))
+        .flatten()
+        .collect::<Vec<Action>>();
+
+    for action in actions {
+        let _ = execute_actions(triggr.clone(), &trigger.project_id, action).await;
+
+        // Update modified timestamp
+        let mut updated_trigger = trigger.clone();
+        updated_trigger.last_run = Utc::now().timestamp_millis() as u64;
+
+        // Save trigger
+        let _ = TriggerStore::store_trigger(&*triggr.store, &contract_addr, updated_trigger);
+    }
+}
+
+/// Function to execute database actions
+async fn execute_actions(triggr: Triggr, project_id: &str, action: Action) {
+    // Unix timestamp
+    let now = Utc::now().timestamp_millis() as u64;
+    match action {
+        // Update database
+        Action::Update {
+            collection,
+            id,
+            fields,
+        } => {
+            // Construct document
+            let doc = Document {
+                id,
+                data: json!(fields),
+                metadata: Some(DocMetadata {
+                    created_at: now,
+                    updated_at: now,
+                    version: None,
+                    tags: Default::default(),
+                }),
+            };
+
+            // Execute database operation
+            let _ = DocumentStore::update(&*triggr.store, project_id, &collection, doc).await;
+        }
+        // Delete database entry
+        Action::Delete { collection, id } => {
+            let _ = DocumentStore::delete(&*triggr.store, project_id, &collection, &id).await;
+        }
+        // Insert into database
+        Action::Insert {
+            id,
+            collection,
+            fields,
+        } => {
+            // Construct document
+            let doc = Document {
+                id,
+                data: json!(fields),
+                metadata: Some(DocMetadata {
+                    created_at: now,
+                    updated_at: now,
+                    version: None,
+                    tags: Default::default(),
+                }),
+            };
+
+            // Execute database operation
+            let _ = DocumentStore::update(&*triggr.store, project_id, &collection, doc).await;
+        }
+
+        // To be implemented in the future
+        Action::Notify { .. } => {}
+    }
 }
 
 /// Struct that describes a trigger.
@@ -327,6 +431,8 @@ pub async fn handle_chain_events(rx: Receiver<EventData>) {
 pub struct Trigger {
     pub id: String,
     pub description: String,
+    /// Project Id the trigger belongs to
+    pub project_id: String,
     /// Raw trigger dsl
     pub dsl: String,
     /// Trigger rules to execute
@@ -336,7 +442,7 @@ pub struct Trigger {
     /// Deploy timestamp
     pub created: u64,
     /// Last time trigger was run
-    pub last_run: u64
+    pub last_run: u64,
 }
 
 /// Struct that describes a trigger and does not contain the parsed rules.
@@ -351,9 +457,8 @@ pub struct SlimTrigger {
     /// Deploy timestamp
     pub created: u64,
     /// Last time trigger was run
-    pub last_run: u64
+    pub last_run: u64,
 }
-
 
 /// Trait to handle trigger operations internally.
 pub trait TriggerStore {
@@ -364,7 +469,12 @@ pub trait TriggerStore {
     fn get_trigger(&self, contract_addr: &str, name: &str) -> StorageResult<Trigger>;
 
     /// Change trigger state.
-    fn set_trigger_state(&self, contract_addr: &str, trigger_id: &str, active: bool) -> StorageResult<()>;
+    fn set_trigger_state(
+        &self,
+        contract_addr: &str,
+        trigger_id: &str,
+        active: bool,
+    ) -> StorageResult<()>;
 
     /// Delete trigger.
     fn delete_trigger(&self, contract_addr: &str, trigger_id: &str) -> StorageResult<()>;
