@@ -1,5 +1,7 @@
 // Copyright (c) 2025, Algorealm Inc.
 
+// This module contains important utilites to interface with a polkadot chain.
+
 use std::collections::HashMap;
 
 use parity_scale_codec::Decode;
@@ -59,7 +61,7 @@ struct TypeDefDetails {
     def: serde_json::Value,
 }
 /// Simplified output structure
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Deserialize, Serialize, ToSchema, Clone)]
 pub struct SimplifiedEvent {
     label: String,
     args: Vec<String>,

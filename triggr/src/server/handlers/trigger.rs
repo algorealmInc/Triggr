@@ -1,6 +1,7 @@
 // Copyright (c) 2025, Algorealm Inc.
 
-// Module containing handlers to handle trigger requests.
+// Module containing handlers for trigger requests.
+
 use axum::{
     extract::{Path, State},
     http::StatusCode,

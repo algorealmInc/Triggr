@@ -1,4 +1,5 @@
 // Copyright (c) 2025, Algorealm Inc.
+
 // This module contains routes to handle incoming http and ws requests.
 
 use super::handlers::docs::ApiDoc;

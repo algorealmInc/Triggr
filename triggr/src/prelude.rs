@@ -15,11 +15,11 @@ use utoipa::ToSchema;
 
 use crate::{
     chain::{
-        polkadot::{prelude::EventData, util::ContractMetadata},
+        polkadot::{prelude::EventData, util::{ContractMetadata, SimplifiedEvent}},
         Blockchain,
     },
     dsl::{Action, DslExecutor, Rule},
-    storage::Sled,
+    storage::{Sled, CollectionSummary},
     util::CryptoError,
 };
 
@@ -178,11 +178,12 @@ pub trait DocumentStore {
     /// * `project_id` - The ID of the project that owns the collection.
     /// * `collection` - The name of the target collection.
     /// * `doc` - The document to insert.
+    /// * `update` - Whether it's an update or a direct insert.
     ///
     /// # Returns
     /// * `Ok(())` if inserted successfully.
     /// * `Err` if insertion fails (e.g. collection not found).
-    async fn insert(&self, project_id: &str, collection: &str, doc: Document) -> StorageResult<()>;
+    async fn insert(&self, project_id: &str, collection: &str, doc: Document, update: bool) -> StorageResult<()>;
 
     /// Retrieve a document by its ID.
     ///
@@ -238,9 +239,12 @@ pub trait DocumentStore {
     /// * `project_id` - The ID of the project whose collections to retrieve.
     ///
     /// # Returns
-    /// * `Ok(Vec<String>)` containing all collections for the project.
+    /// * `Ok(Vec<CollectionSummary>)` containing all collections and its info for the project.
     /// * `Err` if the operation fails (e.g. database error).
-    fn list_collections(&self, project_id: &str) -> StorageResult<Vec<String>>;
+    fn list_collections(&self, project_id: &str) -> StorageResult<Vec<CollectionSummary>>;
+
+    /// Helper to return stats for a single collection
+    fn collection_stats(&self, project_id: &str, collection: &str) -> StorageResult<(usize, u64)>;
 
     /// Check if a collection already exists for a project.
     ///
@@ -256,7 +260,7 @@ pub trait DocumentStore {
 }
 
 /// Metadata describing a document's lifecycle and versioning.
-#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, ToSchema)]
 pub struct DocMetadata {
     /// When the document was created.
     pub created_at: u64,
@@ -276,7 +280,7 @@ pub struct Document {
     /// The actual JSON payload of the document.
     pub data: Value,
     /// Optional metadata (timestamps, versioning, etc).
-    pub metadata: Option<DocMetadata>,
+    pub metadata: DocMetadata,
 }
 
 /// JSON structure to return to subscribed clients
@@ -305,6 +309,8 @@ pub struct Project {
     pub description: String,
     /// Location of contract metadata
     pub contract_file_path: String,
+    /// Events emmitted by contract
+    pub contract_events: Vec<SimplifiedEvent>
 }
 
 /// Trait defining the behavior of a project store.
@@ -384,12 +390,12 @@ async fn execute_actions(triggr: Triggr, project_id: &str, action: Action) {
             let doc = Document {
                 id,
                 data: json!(fields),
-                metadata: Some(DocMetadata {
+                metadata: DocMetadata {
                     created_at: now,
                     updated_at: now,
                     version: None,
                     tags: Default::default(),
-                }),
+                },
             };
 
             // Execute database operation
@@ -409,12 +415,12 @@ async fn execute_actions(triggr: Triggr, project_id: &str, action: Action) {
             let doc = Document {
                 id,
                 data: json!(fields),
-                metadata: Some(DocMetadata {
+                metadata: DocMetadata {
                     created_at: now,
                     updated_at: now,
                     version: None,
                     tags: Default::default(),
-                }),
+                },
             };
 
             // Execute database operation

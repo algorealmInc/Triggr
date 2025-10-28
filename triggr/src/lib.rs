@@ -1,5 +1,7 @@
 // Copyright (c) 2025, Algorealm Inc.
 
+// Triggr - A reactive database for onchain events.
+
 mod chain;
 mod prelude;
 mod server;

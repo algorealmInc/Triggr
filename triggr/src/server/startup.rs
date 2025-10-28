@@ -1,4 +1,5 @@
 // Copyright (c) 2025, Algorealm Inc.
+
 // This module configures and starts the database server. 
 // It connects to a Polkadot Contracts Node (Paseo) to listen for contracts events and pass it internally for handling.
 

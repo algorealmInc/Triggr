@@ -8,8 +8,10 @@ use crate::util::encrypt;
 
 use super::*;
 use async_trait::async_trait;
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use sled::{Db, IVec};
+use utoipa::ToSchema;
 use std::{collections::HashMap, env, fs, path::Path, sync::Arc};
 use tokio::sync::{
     broadcast::{self, Receiver, Sender},
@@ -21,6 +23,14 @@ use tokio::sync::{
 pub struct Metadata {
     pub addr: String,
     pub path: String,
+}
+
+/// Summary statistics for a collection.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct CollectionSummary {
+    pub name: String,
+    pub count: usize,
+    pub last_updated: u64,
 }
 
 /// Subscriptions to track topics and help broadcast database changes to clients.
@@ -217,7 +227,33 @@ impl DocumentStore for Sled {
 
     /// Insert a new document into a collection.
     /// Overwrites any existing document with the same ID.
-    async fn insert(&self, project_id: &str, collection: &str, doc: Document) -> StorageResult<()> {
+    async fn insert(
+        &self,
+        project_id: &str,
+        collection: &str,
+        mut doc: Document,
+        update: bool,
+    ) -> StorageResult<()> {
+        // Unix timestamp
+        let now = Utc::now().timestamp_millis() as u64;
+
+        // Document metadata
+        let metadata = if !update {
+            DocMetadata {
+                created_at: now,
+                updated_at: now,
+                version: None,
+                tags: Default::default(),
+            }
+        } else {
+            DocMetadata {
+                updated_at: now,
+                ..doc.metadata
+            }
+        };
+
+        doc.metadata = metadata;
+
         let key = <Sled as DocumentStore>::key(project_id, collection, &doc.id);
         let value = serde_json::to_vec(&doc)?;
         self.app.insert(key.as_bytes(), value)?;
@@ -252,7 +288,7 @@ impl DocumentStore for Sled {
     /// Update an existing document.
     /// (Internally just calls `insert`, since sled overwrites by key.)
     async fn update(&self, project_id: &str, collection: &str, doc: Document) -> StorageResult<()> {
-        self.insert(project_id, collection, doc).await
+        self.insert(project_id, collection, doc, true).await
     }
 
     /// Delete a document from a collection by ID.
@@ -300,12 +336,15 @@ impl DocumentStore for Sled {
         Ok(docs)
     }
 
-    /// List all collections for a project.
-    /// Scans keys and extracts the collection name from the namespace.
-    fn list_collections(&self, project_id: &str) -> StorageResult<Vec<String>> {
+    /// List all collections for a given project, including document count and
+    /// latest update timestamp.
+    ///
+    /// Scans keys with the prefix: `document::{project_id}::`
+    fn list_collections(&self, project_id: &str) -> StorageResult<Vec<CollectionSummary>> {
         let prefix = format!("document::{project_id}::");
         let mut collections = std::collections::HashSet::new();
 
+        // 🧩 1. Extract unique collection names
         for item in self.app.scan_prefix(prefix.as_bytes()) {
             let (k, _v): (IVec, IVec) = item?;
             let key_str = String::from_utf8(k.to_vec())?;
@@ -316,7 +355,38 @@ impl DocumentStore for Sled {
             }
         }
 
-        Ok(collections.into_iter().collect())
+        // 🧮 2. For each collection, compute stats (count + last_updated)
+        let mut summaries = Vec::new();
+
+        for collection in collections {
+            let (count, last_updated) = self.collection_stats(project_id, &collection)?;
+            summaries.push(CollectionSummary {
+                name: collection,
+                count,
+                last_updated,
+            });
+        }
+
+        Ok(summaries)
+    }
+
+    /// Helper to return stats for a single collection
+    fn collection_stats(&self, project_id: &str, collection: &str) -> StorageResult<(usize, u64)> {
+        let prefix = format!("document::{project_id}::{collection}::");
+        let mut count = 0usize;
+        let mut latest_update = 0u64;
+
+        for item in self.app.scan_prefix(prefix.as_bytes()) {
+            let (_k, v): (IVec, IVec) = item?;
+            let doc: Document = serde_json::from_slice(&v)?;
+
+            count += 1;
+            if doc.metadata.updated_at > latest_update {
+                latest_update = doc.metadata.updated_at;
+            }
+        }
+
+        Ok((count, latest_update))
     }
 
     /// Check if a collection exists for a project.
@@ -335,10 +405,10 @@ impl ProjectStore for Sled {
 
         // addr the API key to be used as project ID
         let encryption_key = env::var("TRIGGR_ENCRYPTION_KEY")?;
-        let addred_key = encrypt(&key, &encryption_key)?;
+        let crypt_key = encrypt(&key, &encryption_key)?;
 
         // Update encrypted key
-        project.api_key = addred_key.clone();
+        project.api_key = crypt_key.clone();
 
         // Serialize the ApiKey for storage in sled
         let bytes = bincode::serialize(&project).map_err(|e| e.to_string())?;
@@ -435,8 +505,8 @@ impl TriggerStore for Sled {
             .transpose()?
             .unwrap_or_default();
 
-         // Add or replace trigger with same ID
-         if let Some(existing) = triggers.iter_mut().find(|t| t.id == trigger.id) {
+        // Add or replace trigger with same ID
+        if let Some(existing) = triggers.iter_mut().find(|t| t.id == trigger.id) {
             *existing = trigger;
         } else {
             triggers.push(trigger);
@@ -534,8 +604,8 @@ impl TriggerStore for Sled {
             )));
         };
 
-        let triggers: Vec<Trigger> =
-            bincode::deserialize::<Vec<Trigger>>(&bytes).map_err(|e| StorageError::Other(e.to_string()))?;
+        let triggers: Vec<Trigger> = bincode::deserialize::<Vec<Trigger>>(&bytes)
+            .map_err(|e| StorageError::Other(e.to_string()))?;
 
         Ok(triggers)
     }

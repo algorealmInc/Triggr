@@ -1,6 +1,6 @@
 // Copyright (c) 2025, Algorealm Inc.
 
-// Module containing
+// Module containing handlers for console (front-end) requests.
 
 use crate::chain::polkadot::util::SimplifiedEvent;
 use crate::{chain::polkadot::util::simplify_events, server::middleware::Auth, util::decrypt};
@@ -28,8 +28,6 @@ const MAX_FILE_SIZE: usize = 10 * 1024 * 1024; // 10MB
 pub struct CreateProjectResponse {
     pub message: String,
     pub project: Project,
-    /// The events from the contract metadata
-    pub events: Vec<SimplifiedEvent>,
 }
 
 /// Request schema for Swagger (multipart form)
@@ -201,15 +199,6 @@ pub async fn create_project(
 
     let contract_file_path = contract_path.display().to_string();
 
-    // Construct project
-    let mut project = Project {
-        id: project_name.clone(),
-        api_key: String::with_capacity(32),
-        owner: auth.claims.user_id.clone(),
-        description: description.clone(),
-        contract_file_path: contract_file_path.clone(),
-    };
-
     // Contract events
     let mut events = Vec::new();
 
@@ -230,6 +219,16 @@ pub async fn create_project(
             cache.save_metadata(contract_addr, metadata);
         }
     }
+
+    // Construct project
+    let mut project = Project {
+        id: project_name.clone(),
+        api_key: String::with_capacity(32),
+        owner: auth.claims.user_id.clone(),
+        description: description.clone(),
+        contract_file_path: contract_file_path.clone(),
+        contract_events: events.clone()
+    };
 
     // Save to database
     match triggr.store.create(&mut project) {
@@ -252,7 +251,6 @@ pub async fn create_project(
     let response = CreateProjectResponse {
         message: "Project created successfully".to_string(),
         project,
-        events,
     };
 
     Ok((StatusCode::CREATED, Json(response)))
@@ -281,7 +279,7 @@ pub async fn delete_project(
     let decrypted_key = &decrypt(&api_key, &encryption_key)
         .or_else(|_| Err(AppError::NotFound("Project not found".into())))?;
 
-    // Use id to delete project
+    // Use auth id to delete project
     let _ = ProjectStore::delete(&*triggr.store, &decrypted_key, &auth.claims.user_id)?;
 
     Ok(Json(json!({
