@@ -1,12 +1,11 @@
 // Copyright (c) 2025, Algorealm Inc.
-
-// This module contains routes to handled and direact incoming http and ws requests.
+// This module contains routes to handle incoming http and ws requests.
 
 use super::handlers::docs::ApiDoc;
 use super::handlers::{console, db, trigger, ws};
 use super::middleware as midw;
 use super::*;
-use axum::routing::{delete, get, put};
+use axum::routing::{get, put}; 
 use axum::{middleware as mw, routing::post, Router};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -35,8 +34,7 @@ pub fn db_routes() -> Router<Triggr> {
 /// Returns routes to handle console requests.
 pub fn console_routes() -> Router<Triggr> {
     Router::new()
-        .route("/api/console/login", 
-        get(console::login))
+        .route("/api/console/login", get(console::login))
         .route("/api/console/project", post(console::create_project))
         .route(
             "/api/console/project/{project_id}",

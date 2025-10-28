@@ -535,7 +535,7 @@ impl TriggerStore for Sled {
         };
 
         let triggers: Vec<Trigger> =
-            bincode::deserialize(&bytes).map_err(|e| StorageError::Other(e.to_string()))?;
+            bincode::deserialize::<Vec<Trigger>>(&bytes).map_err(|e| StorageError::Other(e.to_string()))?;
 
         Ok(triggers)
     }

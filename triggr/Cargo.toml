@@ -30,6 +30,7 @@ substrate-api-client = { git = "https://github.com/scs/substrate-api-client.git"
 parity-scale-codec = "3.7.5"
 scale-value = "0.18.1"
 chrono = "0.4.42"
+colored = "3.0.0"
 
 [features]
 tracing = []
