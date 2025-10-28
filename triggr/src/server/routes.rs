@@ -58,6 +58,7 @@ pub fn trigger_routes() -> Router<Triggr> {
             "/api/trigger/{contract_addr}/{id}/state",
             put(trigger::update_trigger_state),
         )
+        .route_layer(mw::from_fn(midw::require_api_key))
 }
 
 /// Returns the 'ws' route.
