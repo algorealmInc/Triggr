@@ -126,7 +126,12 @@ pub async fn list_documents(
     ref_project: RefProject,
 ) -> Result<impl IntoResponse, AppError> {
     let docs = triggr.store.list(&ref_project.project.id, &name)?;
-    Ok((StatusCode::OK, Json(docs)))
+    Ok((
+        StatusCode::OK,
+        Json(json!({
+            "data": docs
+        })),
+    ))
 }
 
 /// Get a document by ID
@@ -152,7 +157,12 @@ pub async fn get_document(
         .store
         .get(&ref_project.project.id, &name, &id)?
         .or_not_found("Document {id} not found")?;
-    Ok((StatusCode::OK, Json(doc)))
+    Ok((
+        StatusCode::OK,
+        Json(json!({
+            "data": doc
+        })),
+    ))
 }
 
 /// Update a document

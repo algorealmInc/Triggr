@@ -9,10 +9,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{collections::HashMap, env::VarError, string::FromUtf8Error, sync::Arc};
 use thiserror::Error;
-use tokio::sync::{Mutex, RwLock, mpsc::Receiver};
+use tokio::sync::{RwLock, mpsc::Receiver};
 use utoipa::ToSchema;
 
-use crate::{chain::{Blockchain, polkadot::{util::ContractMetadata, prelude::EventData}}, storage::Sled, util::CryptoError};
+use crate::{chain::{Blockchain, polkadot::{util::ContractMetadata, prelude::EventData}}, storage::Sled, util::CryptoError, dsl::Rule};
 
 /// Errors from internal node operations.
 #[derive(Debug, Error)]
@@ -72,10 +72,10 @@ pub static DEFAULT_DB_PATH_METADATA: &str = "./.data/metadata";
 /// Default path to database storage for triggers.
 pub static DEFAULT_TRIGGER_PATH_METADATA: &str = "./.data/triggers";
 
-/// Contracts file directory
+/// Contracts file directory.
 pub const CONTRACTS_DIR: &str = "./.data/contracts";
 
-/// The API key type
+/// The API key type.
 pub type ApiKey = String;
 
 /// The entire state of the database system.
@@ -320,4 +320,55 @@ pub trait ProjectStore: Send + Sync {
 /// Function to handle blockchain events and execute triggers.
 pub async fn handle_chain_events(rx: Receiver<EventData>) {
     
+}
+
+/// Struct that describes a trigger.
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Trigger {
+    pub id: String,
+    pub description: String,
+    /// Raw trigger dsl
+    pub dsl: String,
+    /// Trigger rules to execute
+    pub rules: Vec<Rule>,
+    /// Flag to indicate state
+    pub active: bool,
+    /// Deploy timestamp
+    pub created: u64,
+    /// Last time trigger was run
+    pub last_run: u64
+}
+
+/// Struct that describes a trigger and does not contain the parsed rules.
+#[derive(Clone, Serialize, Deserialize, ToSchema)]
+pub struct SlimTrigger {
+    pub id: String,
+    pub description: String,
+    /// Raw trigger dsl
+    pub dsl: String,
+    /// Flag to indicate state
+    pub active: bool,
+    /// Deploy timestamp
+    pub created: u64,
+    /// Last time trigger was run
+    pub last_run: u64
+}
+
+
+/// Trait to handle trigger operations internally.
+pub trait TriggerStore {
+    /// Store trigger
+    fn store_trigger(&self, contract_addr: &str, trigger: Trigger) -> StorageResult<()>;
+
+    /// Return trigger.
+    fn get_trigger(&self, contract_addr: &str, name: &str) -> StorageResult<Trigger>;
+
+    /// Change trigger state.
+    fn set_trigger_state(&self, contract_addr: &str, trigger_id: &str, active: bool) -> StorageResult<()>;
+
+    /// Delete trigger.
+    fn delete_trigger(&self, contract_addr: &str, trigger_id: &str) -> StorageResult<()>;
+
+    /// List all triggers for a contract.
+    fn list_triggers(&self, contract_addr: &str) -> StorageResult<Vec<Trigger>>;
 }

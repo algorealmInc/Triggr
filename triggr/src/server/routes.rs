@@ -3,11 +3,11 @@
 // This module contains routes to handled and direact incoming http and ws requests.
 
 use super::handlers::docs::ApiDoc;
-use super::handlers::{console, db, ws};
+use super::handlers::{console, db, trigger, ws};
 use super::middleware as midw;
 use super::*;
-use axum::routing::{delete, get};
-use axum::{Router, middleware as mw, routing::post};
+use axum::routing::{delete, get, put};
+use axum::{middleware as mw, routing::post, Router};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -35,7 +35,8 @@ pub fn db_routes() -> Router<Triggr> {
 /// Returns routes to handle console requests.
 pub fn console_routes() -> Router<Triggr> {
     Router::new()
-        .route("/api/console/login", get(console::login))
+        .route("/api/console/login", 
+        get(console::login))
         .route("/api/console/project", post(console::create_project))
         .route(
             "/api/console/project/{project_id}",
@@ -45,10 +46,19 @@ pub fn console_routes() -> Router<Triggr> {
 }
 
 /// Returns routes to handle console requests concerning triggers.
-// pub fn trigger_routes() -> Router<Triggr> {
-//     Router::new()
-//         .route("/api/trigger/create", post(trigger::create_trigger))
-// }
+pub fn trigger_routes() -> Router<Triggr> {
+    Router::new()
+        .route("/api/trigger", post(trigger::save_trigger))
+        .route("/api/trigger/:contract_addr", get(trigger::list_triggers))
+        .route(
+            "/api/trigger/:contract_addr/:id",
+            get(trigger::get_trigger).delete(trigger::delete_trigger),
+        )
+        .route(
+            "/api/trigger/:contract_addr/:id/state",
+            put(trigger::update_trigger_state),
+        )
+}
 
 /// Returns the 'ws' route.
 pub fn ws_route() -> Router<Triggr> {

@@ -37,6 +37,7 @@ pub async fn run() {
     // Server configuration
     let app = Router::new()
         .merge(routes::db_routes())
+        .merge(routes::trigger_routes())
         .merge(routes::console_routes())
         .merge(routes::ws_route())
         .merge(routes::docs_routes())
