@@ -2,10 +2,8 @@
 
 // Module containing
 
-use crate::{
-    chain::polkadot::util::{parse_contract_events, SimplifiedEvent},
-    server::middleware::Auth,
-};
+use crate::chain::polkadot::util::SimplifiedEvent;
+use crate::{chain::polkadot::util::simplify_events, server::middleware::Auth, util::decrypt};
 use axum::{
     extract::{Multipart, Path, State},
     http::StatusCode,
@@ -14,12 +12,14 @@ use axum::{
 };
 use serde::Serialize;
 use serde_json::{json, Value};
+use std::{env, path::PathBuf};
+use tokio::io::AsyncWriteExt;
 use utoipa::ToSchema;
 
-use std::path::PathBuf;
-use tokio::io::AsyncWriteExt;
-
-use super::{db::AppError, *};
+use super::{
+    db::{AppError, OptionExt},
+    *,
+};
 
 /// Max uploadable file size
 const MAX_FILE_SIZE: usize = 10 * 1024 * 1024; // 10MB
@@ -37,7 +37,7 @@ pub struct CreateProjectResponse {
 pub struct ProjectCreateForm {
     pub project_name: String,
     pub description: String,
-    pub contract_hash: String,
+    pub contract_addr: String,
     #[schema(value_type = String, format = Binary)]
     pub contracts_json: Vec<u8>,
 }
@@ -80,7 +80,7 @@ pub async fn create_project(
 ) -> Result<(StatusCode, Json<CreateProjectResponse>), AppError> {
     let mut project_name: Option<String> = None;
     let mut description: Option<String> = None;
-    let mut contract_hash: Option<String> = None;
+    let mut contract_addr: Option<String> = None;
     let mut contract_file_path: Option<PathBuf> = None;
 
     // Ensure contracts directory exists
@@ -121,7 +121,7 @@ pub async fn create_project(
                         .to_string(),
                 );
             }
-            "contract_hash" => {
+            "contract_addr" => {
                 let hash = field.text().await.unwrap_or_else(|_| String::new());
 
                 // Validate hash format (alphanumeric only)
@@ -131,13 +131,13 @@ pub async fn create_project(
                     ));
                 }
 
-                contract_hash = Some(hash);
+                contract_addr = Some(hash);
             }
             "contracts_json" => {
-                // Ensure we have contract_hash before processing file
-                let hash = contract_hash.as_ref().ok_or_else(|| {
+                // Ensure we have contract_addr before processing file
+                let hash = contract_addr.as_ref().ok_or_else(|| {
                     AppError::BadRequest(
-                        "contract_hash must be provided before contracts_json".to_string(),
+                        "contract_addr must be provided before contracts_json".to_string(),
                     )
                 })?;
 
@@ -193,11 +193,13 @@ pub async fn create_project(
     let description =
         description.ok_or_else(|| AppError::BadRequest("Missing description".to_string()))?;
 
-    let _contract_hash =
-        contract_hash.ok_or_else(|| AppError::BadRequest("Missing contract_hash".to_string()))?;
+    let contract_addr =
+        contract_addr.ok_or_else(|| AppError::BadRequest("Missing contract_addr".to_string()))?;
 
     let contract_path = contract_file_path
         .ok_or_else(|| AppError::BadRequest("Missing contracts_json file".to_string()))?;
+
+    let contract_file_path = contract_path.display().to_string();
 
     // Construct project
     let mut project = Project {
@@ -205,14 +207,28 @@ pub async fn create_project(
         api_key: String::with_capacity(32),
         owner: auth.claims.user_id.clone(),
         description: description.clone(),
-        contract_file_path: contract_path.display().to_string(),
+        contract_file_path: contract_file_path.clone(),
     };
+
+    // Contract events
+    let mut events = Vec::new();
+
+    // Save metadata info to database
+    triggr
+        .store
+        .store_metadata_entry(&contract_addr, &contract_file_path)?;
 
     // Add metadata content to high speed cache
     if let Some(path_str) = contract_path.to_str() {
         // Acquire cache lock
         let mut cache = triggr.cache.write().await;
-        cache.load_n_serialize(path_str)?;
+        if let Ok(metadata) = cache.load_n_serialize(path_str) {
+            // Extract events
+            events = simplify_events(&metadata);
+
+            // Save to high speed cache
+            cache.save_metadata(contract_addr, metadata);
+        }
     }
 
     // Save to database
@@ -230,19 +246,6 @@ pub async fn create_project(
                 e
             )));
         }
-    };
-
-
-    // Extract event from contract file
-    let events = if let Some(path) = contract_path.to_str() {
-        if let Ok(events) = parse_contract_events(path) {
-            events
-        } else {
-            // Return empty array
-            vec![]
-        }
-    } else {
-        vec![]
     };
 
     // Return success response
@@ -272,11 +275,50 @@ pub async fn delete_project(
     Path(api_key): Path<String>,
     auth: Auth,
 ) -> Result<impl IntoResponse, AppError> {
+    // Get API Key from public cypher id
+    let encryption_key = env::var("TRIGGR_ENCRYPTION_KEY")
+        .or_else(|_| Err(AppError::NotFound("Project not found".into())))?;
+    let decrypted_key = &decrypt(&api_key, &encryption_key)
+        .or_else(|_| Err(AppError::NotFound("Project not found".into())))?;
+
     // Use id to delete project
-    let _ = ProjectStore::delete(&*triggr.store, &api_key, &auth.claims.user_id)?;
+    let _ = ProjectStore::delete(&*triggr.store, &decrypted_key, &auth.claims.user_id)?;
 
     Ok(Json(json!({
         "message": "Project deleted successfully."
+    })))
+}
+
+/// Return a project
+#[utoipa::path(
+    get,
+    path = "/api/console/project/{api_key}",
+    params(
+        ("api_key" = String, Path, description = "Project Api Key"),
+    ),
+    responses(
+        (status = 200, description = "Project returned successfully"),
+        (status = 404, description = "Project not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
+pub async fn get_project(
+    State(triggr): State<Triggr>,
+    Path(api_key): Path<String>,
+    _auth: Auth,
+) -> Result<impl IntoResponse, AppError> {
+    // Get API Key from public cypher id
+    let encryption_key = env::var("TRIGGR_ENCRYPTION_KEY")
+        .or_else(|_| Err(AppError::NotFound("Project not found".into())))?;
+    let decrypted_key = &decrypt(&api_key, &encryption_key)
+        .or_else(|_| Err(AppError::NotFound("Project not found".into())))?;
+
+    // Fetch and return projects
+    let project =
+        ProjectStore::get(&*triggr.store, &decrypted_key)?.or_not_found("Project not found")?;
+
+    Ok(Json(json!({
+        "project": project
     })))
 }
 

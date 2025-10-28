@@ -5,6 +5,7 @@ mod prelude;
 mod server;
 mod storage;
 mod util;
+mod dsl;
 
 // Re-export prelude definitions
 pub(crate) use prelude::*;

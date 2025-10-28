@@ -7,10 +7,10 @@ use crate::{
     server::middleware::RefProject,
 };
 use axum::{
-    Json,
     extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
+    Json,
 };
 use serde_json::json;
 
@@ -76,7 +76,12 @@ pub async fn list_collections(
     ref_project: RefProject,
 ) -> Result<impl IntoResponse, AppError> {
     let cols = triggr.store.list_collections(&ref_project.project.id)?;
-    Ok((StatusCode::OK, Json(cols)))
+    Ok((
+        StatusCode::OK,
+        Json(json!({
+            "data": cols
+        })),
+    ))
 }
 
 /// Insert a new document
@@ -121,7 +126,12 @@ pub async fn list_documents(
     ref_project: RefProject,
 ) -> Result<impl IntoResponse, AppError> {
     let docs = triggr.store.list(&ref_project.project.id, &name)?;
-    Ok((StatusCode::OK, Json(docs)))
+    Ok((
+        StatusCode::OK,
+        Json(json!({
+            "data": docs
+        })),
+    ))
 }
 
 /// Get a document by ID
@@ -147,7 +157,12 @@ pub async fn get_document(
         .store
         .get(&ref_project.project.id, &name, &id)?
         .or_not_found("Document {id} not found")?;
-    Ok((StatusCode::OK, Json(doc)))
+    Ok((
+        StatusCode::OK,
+        Json(json!({
+            "data": doc
+        })),
+    ))
 }
 
 /// Update a document
@@ -202,5 +217,5 @@ pub async fn delete_document(
         .store
         .delete(&ref_project.project.id, &name, &id)
         .await?;
-    Ok((StatusCode::NO_CONTENT, "".into_response()))
+    Ok((StatusCode::OK, Json(json!({ "ok": true }))))
 }

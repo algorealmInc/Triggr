@@ -1,3 +1,7 @@
+// Copyright (c) 2025, Algorealm Inc.
+
+// THis module contains code to parse and serialize triggers from the front end.
+
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -10,7 +14,7 @@ pub struct EventDefinition {
 }
 
 /// Dsl Condition
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Condition {
     GreaterThan(String, f64),    // field > value
     LessThan(String, f64),       // field < value
@@ -23,7 +27,7 @@ pub enum Condition {
 }
 
 /// Dsl Action
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Action {
     Update {
         collection: String,
@@ -45,7 +49,7 @@ pub enum Action {
 }
 
 /// Dsl Rule
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Rule {
     pub event_name: String,
     pub condition: Option<Condition>,
@@ -811,140 +815,4 @@ impl ScriptBuilder {
             rules: self.rules,
         }
     }
-}
-
-fn main() {
-    println!("🚀 Event-Driven Dsl Example\n");
-
-    // Example 1: Parse events from Dsl
-    let dsl = r#"
-        const events = [
-        transferred { amount }
-    ]
-
-fn main(event) {
-    if (event.transferred.amount > 200000) {
-        update @transactions:tx_123 with { status: "flagged" }
-        notify "Large transfer"
-    } else {
-        delete @pending:tx_123
-        insert @tran:23_d with { name: "deji", age: 24}
-    }
-}
-    "#;
-
-    let script = DslParser::parse_script(dsl);
-
-    println!("{:#?}", script);
-
-    // let events = DslParser::parse_events(dsl).unwrap();
-    // println!("📋 Parsed Events:");
-    // for event in &events {
-    //     println!("  - {} {{ {} }}", event.name, event.fields.join(", "));
-    // }
-
-    // // Example 2: Parse different actions
-    // println!("\n🎬 Parsing Actions:");
-
-    // let actions = vec![
-    //     r#"update @transactions:tx_123 with { status: "flagged", reviewed: false }"#,
-    //     r#"delete @pending:tx_456"#,
-    //     r#"insert @logs:log_001 with { event: "Transfer", amount: 1000 }"#,
-    //     r#"notify "Large transfer detected""#,
-    // ];
-
-    // for action_str in actions {
-    //     match DslParser::parse_action(action_str) {
-    //         Ok(action) => {
-    //             println!("\n  Input: {}", action_str);
-    //             match action {
-    //                 Action::Update { collection, id, fields } => {
-    //                     println!("  → UPDATE {} @ {} with:", collection, id);
-    //                     for (k, v) in fields {
-    //                         println!("      {}: {}", k, v);
-    //                     }
-    //                 }
-    //                 Action::Delete { collection, id } => {
-    //                     println!("  → DELETE {} @ {}", collection, id);
-    //                 }
-    //                 Action::Insert { collection, id, fields } => {
-    //                     println!("  → INSERT {} @ {} with:", collection, id);
-    //                     for (k, v) in fields {
-    //                         println!("      {}: {}", k, v);
-    //                     }
-    //                 }
-    //                 Action::Notify { message } => {
-    //                     println!("  → NOTIFY: {}", message);
-    //                 }
-    //             }
-    //         }
-    //         Err(e) => println!("  ✗ Error: {}", e),
-    //     }
-    // }
-
-    // // Example 3: Build a complete script
-    // println!("\n📜 Building Complete Script:");
-
-    // let script = ScriptBuilder::new()
-    //     .add_event("transferred", vec!["amount"])
-    //     .add_event("moneyWithdrawn", vec!["amount", "recipient"])
-    //     .add_rule(Rule {
-    //         event_name: "transferred".to_string(),
-    //         condition: Some(Condition::GreaterThan("amount".to_string(), 200000.0)),
-    //         actions: vec![
-    //             DslParser::parse_action(
-    //                 r#"update @transactions:tx_123 with { status: "flagged" }"#
-    //             ).unwrap(),
-    //             DslParser::parse_action(
-    //                 r#"notify "Large transfer detected""#
-    //             ).unwrap(),
-    //         ],
-    //     })
-    //     .add_rule(Rule {
-    //         event_name: "transferred".to_string(),
-    //         condition: Some(Condition::LessOrEqual("amount".to_string(), 200000.0)),
-    //         actions: vec![
-    //             DslParser::parse_action("delete @pending:tx_123").unwrap(),
-    //         ],
-    //     })
-    //     .build();
-
-    // println!("  ✓ Created script with {} events and {} rules",
-    //          script.events.len(), script.rules.len());
-
-    // // Example 4: Execute rules
-    // println!("\n🎯 Executing Rules:");
-
-    // let mut event_fields = HashMap::new();
-    // event_fields.insert("amount".to_string(), json!(250000));
-
-    // let event = EventData {
-    //     event_name: "transferred".to_string(),
-    //     fields: event_fields,
-    // };
-
-    // println!("  Event: transferred {{ amount: 250000 }}");
-
-    // for (i, rule) in script.rules.iter().enumerate() {
-    //     if let Some(actions) = DslExecutor::execute_rule(rule, &event) {
-    //         println!("\n  ✓ Rule {} matched!", i + 1);
-    //         for action in actions {
-    //             match action {
-    //                 Action::Update { collection, id, fields } => {
-    //                     println!("    → Update {} @ {}", collection, id);
-    //                     for (k, v) in fields {
-    //                         println!("        {}: {}", k, v);
-    //                     }
-    //                 }
-    //                 Action::Delete { collection, id } => {
-    //                     println!("    → Delete {} @ {}", collection, id);
-    //                 }
-    //                 Action::Notify { message } => {
-    //                     println!("    → Notify: {}", message);
-    //                 }
-    //                 _ => {}
-    //             }
-    //         }
-    //     }
-    // }
 }

@@ -4,7 +4,7 @@
 // We are using sled for the internal database storage. This is because it is fast and composable in a single binary.
 // No external (network) dependencies.
 
-use crate::util::encrypt;
+use crate::{dsl::Rule, util::encrypt};
 
 use super::*;
 use async_trait::async_trait;
@@ -19,7 +19,7 @@ use tokio::sync::{
 /// Metadata database entry
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Metadata {
-    pub hash: String,
+    pub addr: String,
     pub path: String,
 }
 
@@ -37,9 +37,8 @@ impl DbSubscriptions {
     }
 }
 
-// Implement `Subscribe` for DbSubscription
-#[async_trait]
-impl Subscribe for DbSubscriptions {
+// Implement DbSubscription
+impl DbSubscriptions {
     /// Publish a message to all subscribers of a topic.
     async fn publish(&self, collection: &str, doc_id: &str, mut json: WsPayload) {
         let topics = self.topics.read().await;
@@ -68,7 +67,7 @@ impl Subscribe for DbSubscriptions {
 
     /// Subscribe to a topic (doc_id or collection).
     /// Creates the topic if it doesn't exist yet.
-    async fn subscribe(&self, topic: &str) -> Receiver<String> {
+    pub async fn subscribe(&self, topic: &str) -> Receiver<String> {
         let mut topics = self.topics.write().await;
 
         // Get or insert the broadcast channel
@@ -97,6 +96,8 @@ pub struct Sled {
     pub users: Arc<Db>,
     /// Contract metadata store
     pub metadata: Arc<Db>,
+    /// Trigger store
+    pub triggers: Arc<Db>,
     /// Subscription mechanism
     pub subscriptions: DbSubscriptions,
 }
@@ -112,12 +113,15 @@ impl Sled {
             .unwrap_or_else(|_| DEFAULT_DB_PATH_USERS.to_string());
         let meta_path = std::env::var("TRIGGR_DB_PATH_METADATA")
             .unwrap_or_else(|_| DEFAULT_DB_PATH_METADATA.to_string());
+        let trigger_path = std::env::var("TRIGGR_TRIGGER_PATH_METADATA")
+            .unwrap_or_else(|_| DEFAULT_TRIGGER_PATH_METADATA.to_string());
 
         // Open or create storage directory
         fs::create_dir_all(&projects_path).expect(&format!("Failed to create {}", projects_path));
         fs::create_dir_all(&app_path).expect(&format!("Failed to create {}", app_path));
         fs::create_dir_all(&users_path).expect(&format!("Failed to create {}", users_path));
         fs::create_dir_all(&meta_path).expect(&format!("Failed to create {}", meta_path));
+        fs::create_dir_all(&trigger_path).expect(&format!("Failed to create {}", trigger_path));
 
         // Initialize database
         let projects_db =
@@ -125,12 +129,15 @@ impl Sled {
         let app_db = ::sled::open(Path::new(&app_path)).expect("Failed to open sled database");
         let users_db = ::sled::open(Path::new(&users_path)).expect("Failed to open sled database");
         let meta_db = ::sled::open(Path::new(&meta_path)).expect("Failed to open sled database");
+        let trigger_db =
+            ::sled::open(Path::new(&trigger_path)).expect("Failed to open sled database");
 
         Self {
             projects: Arc::new(projects_db),
             app: Arc::new(app_db),
             users: Arc::new(users_db),
             metadata: Arc::new(meta_db),
+            triggers: Arc::new(trigger_db),
             subscriptions: DbSubscriptions::default(),
         }
     }
@@ -156,43 +163,8 @@ impl Sled {
         Ok(())
     }
 
-    /// Helper function to store all metadata paths as a whole into the db.
-    pub fn store_metadata_paths(&self, path: &str) -> StorageResult<()> {
-        const KEY: &str = "HANNAH";
-
-        // Fetch existing list
-        let mut paths: Vec<String> = if let Some(bytes) = self.metadata.get(KEY)? {
-            bincode::deserialize(&bytes).unwrap_or_default()
-        } else {
-            vec![]
-        };
-
-        // Add only if not already present
-        if !paths.contains(&path.to_string()) {
-            paths.push(path.to_string());
-        }
-
-        // Serialize and store updated list
-        let bytes = bincode::serialize(&paths)
-            .map_err(|e| format!("Failed to serialize metadata paths: {}", e))?;
-
-        self.metadata.insert(KEY, bytes)?;
-        self.metadata.flush()?; // ensure persistence
-
-        Ok(())
-    }
-
-    pub fn get_metadata_paths(&self) -> StorageResult<Vec<String>> {
-        const KEY: &str = "HANNAH";
-        if let Some(bytes) = self.metadata.get(KEY)? {
-            Ok(bincode::deserialize(&bytes).unwrap_or_default())
-        } else {
-            Ok(vec![])
-        }
-    }
-
-    /// Store or update unique (hash, path) entries under a single key ("HANNAH")
-    pub fn store_metadata_entry(&self, hash: &str, path: &str) -> StorageResult<()> {
+    /// Store or update unique (addr, path) entries under a single key ("HANNAH")
+    pub fn store_metadata_entry(&self, addr: &str, path: &str) -> StorageResult<()> {
         const KEY: &str = "HANNAH";
 
         // Fetch existing entries (or start with an empty vector)
@@ -202,10 +174,10 @@ impl Sled {
             vec![]
         };
 
-        // Check if an entry with the same hash already exists
-        if !entries.iter().any(|e| e.hash == hash) {
+        // Check if an entry with the same addr already exists
+        if !entries.iter().any(|e| e.addr == addr) {
             entries.push(Metadata {
-                hash: hash.to_string(),
+                addr: addr.to_string(),
                 path: path.to_string(),
             });
         }
@@ -251,17 +223,17 @@ impl DocumentStore for Sled {
         self.app.insert(key.as_bytes(), value)?;
 
         // Broadcast the insert event to all subscribed clients
-        Subscribe::publish(
-            &self.subscriptions,
-            collection,
-            &doc.id,
-            WsPayload {
-                op: String::from("insert"),
-                topic: String::with_capacity(100),
-                doc: doc.clone(),
-            },
-        )
-        .await;
+        self.subscriptions
+            .publish(
+                collection,
+                &doc.id,
+                WsPayload {
+                    op: String::from("insert"),
+                    topic: String::with_capacity(100),
+                    doc: doc.clone(),
+                },
+            )
+            .await;
 
         Ok(())
     }
@@ -296,17 +268,17 @@ impl DocumentStore for Sled {
         // Only use the old value to notify subscribers, not in the publish API
         if let Some(doc) = old_value {
             if let Ok(doc) = serde_json::from_str(&doc) {
-                Subscribe::publish(
-                    &self.subscriptions,
-                    collection,
-                    id,
-                    WsPayload {
-                        op: String::from("delete"),
-                        topic: String::with_capacity(100),
-                        doc,
-                    },
-                )
-                .await;
+                self.subscriptions
+                    .publish(
+                        collection,
+                        id,
+                        WsPayload {
+                            op: String::from("delete"),
+                            topic: String::with_capacity(100),
+                            doc,
+                        },
+                    )
+                    .await;
             }
         }
 
@@ -361,12 +333,12 @@ impl ProjectStore for Sled {
         // Generate a random 32-character alphanumeric key.
         let key = util::generate_nonce::<32>();
 
-        // Hash the API key to be used as project ID
+        // addr the API key to be used as project ID
         let encryption_key = env::var("TRIGGR_ENCRYPTION_KEY")?;
-        let hashed_key = encrypt(&key, &encryption_key)?;
+        let addred_key = encrypt(&key, &encryption_key)?;
 
         // Update encrypted key
-        project.api_key = hashed_key.clone();
+        project.api_key = addred_key.clone();
 
         // Serialize the ApiKey for storage in sled
         let bytes = bincode::serialize(&project).map_err(|e| e.to_string())?;
@@ -419,6 +391,20 @@ impl ProjectStore for Sled {
             .remove(key.as_bytes())
             .map_err(|e| e.to_string())?;
 
+        // Load user projects
+        let mut projects: Vec<Project> = if let Some(value) = self.users.get(owner.as_bytes())? {
+            bincode::deserialize(&value).map_err(|e| format!("Deserialization error: {e}"))?
+        } else {
+            Vec::new()
+        };
+
+        // Filter out the deleted project
+        projects.retain(|p| p.id != project.id);
+
+        // Serialize and save the updated list
+        let serialized = bincode::serialize(&projects).map_err(|e| e.to_string())?;
+        self.users.insert(owner.as_bytes(), serialized)?;
+
         Ok(())
     }
 
@@ -431,5 +417,119 @@ impl ProjectStore for Sled {
         } else {
             Ok(Vec::new())
         }
+    }
+}
+
+impl TriggerStore for Sled {
+    /// Store (append) a new trigger for a given contract.
+    fn store_trigger(&self, contract_addr: &str, trigger: Trigger) -> StorageResult<()> {
+        let key = contract_addr.as_bytes();
+
+        // Fetch existing triggers (if any)
+        let mut triggers: Vec<Trigger> = self
+            .triggers
+            .get(key)?
+            .map(|bytes| bincode::deserialize(&bytes).map_err(|e| StorageError::Other(e.to_string())))
+            .transpose()?
+            .unwrap_or_default();
+
+        // Insert only if the same id doesn’t already exist
+        if !triggers.iter().any(|t| t.id == trigger.id) {
+            triggers.push(trigger);
+        }
+
+        // Serialize and store back
+        let encoded = bincode::serialize(&triggers)
+            .map_err(|e| StorageError::Other(e.to_string()))?;
+        self.triggers.insert(key, encoded)?;
+        self.triggers.flush()?;
+        Ok(())
+    }
+
+    /// Retrieve a specific trigger by contract address and trigger id.
+    fn get_trigger(&self, contract_addr: &str, name: &str) -> StorageResult<Trigger> {
+        let key = contract_addr.as_bytes();
+
+        let bytes = self
+            .triggers
+            .get(key)?
+            .ok_or_else(|| StorageError::NotFound(format!("No triggers found for contract {contract_addr}")))?;
+
+        let triggers: Vec<Trigger> =
+            bincode::deserialize(&bytes).map_err(|e| StorageError::Other(e.to_string()))?;
+
+        triggers
+            .into_iter()
+            .find(|t| t.id == name)
+            .ok_or_else(|| StorageError::NotFound(format!("No trigger with id {name} for {contract_addr}")))
+    }
+
+    /// Update active/inactive state of a specific trigger.
+    fn set_trigger_state(&self, contract_addr: &str, trigger_id: &str, active: bool) -> StorageResult<()> {
+        let key = contract_addr.as_bytes();
+
+        let bytes = self
+            .triggers
+            .get(key)?
+            .ok_or_else(|| StorageError::NotFound(format!("No triggers found for contract {contract_addr}")))?;
+
+        let mut triggers: Vec<Trigger> =
+            bincode::deserialize(&bytes).map_err(|e| StorageError::Other(e.to_string()))?;
+
+        let Some(trigger) = triggers.iter_mut().find(|t| t.id == trigger_id) else {
+            return Err(StorageError::NotFound(format!("Trigger {trigger_id} not found")));
+        };
+
+        trigger.active = active;
+
+        let encoded = bincode::serialize(&triggers)
+            .map_err(|e| StorageError::Other(e.to_string()))?;
+        self.triggers.insert(key, encoded)?;
+        self.triggers.flush()?;
+        Ok(())
+    }
+
+    /// Delete a specific trigger by ID.
+    fn delete_trigger(&self, contract_addr: &str, trigger_id: &str) -> StorageResult<()> {
+        let key = contract_addr.as_bytes();
+
+        let bytes = self
+            .triggers
+            .get(key)?
+            .ok_or_else(|| StorageError::NotFound(format!("No triggers found for contract {contract_addr}")))?;
+
+        let mut triggers: Vec<Trigger> =
+            bincode::deserialize(&bytes).map_err(|e| StorageError::Other(e.to_string()))?;
+
+        let len_before = triggers.len();
+        triggers.retain(|t| t.id != trigger_id);
+
+        if triggers.len() == len_before {
+            return Err(StorageError::NotFound(format!(
+                "Trigger {trigger_id} not found for {contract_addr}"
+            )));
+        }
+
+        let encoded = bincode::serialize(&triggers)
+            .map_err(|e| StorageError::Other(e.to_string()))?;
+        self.triggers.insert(key, encoded)?;
+        self.triggers.flush()?;
+        Ok(())
+    }
+
+    /// List all triggers for a specific contract address.
+    fn list_triggers(&self, contract_addr: &str) -> StorageResult<Vec<Trigger>> {
+        let key = contract_addr.as_bytes();
+
+        let Some(bytes) = self.triggers.get(key)? else {
+            return Err(StorageError::NotFound(format!(
+                "No triggers found for contract {contract_addr}"
+            )));
+        };
+
+        let triggers: Vec<Trigger> =
+            bincode::deserialize(&bytes).map_err(|e| StorageError::Other(e.to_string()))?;
+
+        Ok(triggers)
     }
 }

@@ -88,7 +88,10 @@ pub fn encrypt(plaintext: &str, key_base64: &str) -> Result<String, CryptoError>
     result.extend_from_slice(&ciphertext);
     
     // Encode to base64 for easy storage/transmission
-    Ok(general_purpose::STANDARD.encode(&result))
+    let str = general_purpose::STANDARD.encode(&result);
+
+    // Replace all "/" with "_"
+    Ok(str.replace("/", "_"))
 }
 
 /// Decrypt a ciphertext string using AES-256-GCM
@@ -100,6 +103,10 @@ pub fn encrypt(plaintext: &str, key_base64: &str) -> Result<String, CryptoError>
 /// # Returns
 /// The original plaintext string
 pub fn decrypt(encrypted_base64: &str, key_base64: &str) -> Result<String, CryptoError> {
+
+    // Replace string before decoding
+    let encrypted_base64 = encrypted_base64.replace("_", "/");
+
     // Decode the key from base64
     let key_bytes = general_purpose::STANDARD
         .decode(key_base64)
@@ -133,4 +140,5 @@ pub fn decrypt(encrypted_base64: &str, key_base64: &str) -> Result<String, Crypt
     // Convert bytes to string
     String::from_utf8(plaintext_bytes)
         .map_err(|_| CryptoError::DecryptionFailed)
+
 }

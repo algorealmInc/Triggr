@@ -10,9 +10,8 @@ use axum::{
     routing::get,
     Extension, Router,
 };
-use futures::channel::oneshot;
+use tokio::sync::mpsc;
 use tokio::net::TcpListener;
-
 use tower_http::cors::{Any, CorsLayer};
 
 /// Configure the server and get it running.
@@ -21,46 +20,53 @@ pub async fn run() {
     let state = Triggr::new();
 
     // Create one-way channel to send decoded event from the listener task to the database
-    let (tx, rx) = oneshot::channel();
+    let (tx, rx) = mpsc::channel(100);
 
-    // Create a local task set
+    // Spin up a task to listen to blockchain events and execute triggers configure for them
+    tokio::task::spawn(handle_chain_events(rx));
+
+    // Create LocalSet for !Send futures
     let local = tokio::task::LocalSet::new();
-    local
-        .run_until(async {
-            // Connect to PassetHub to listen to chain events
-            let api = Polkadot::connect(CONTRACTS_NODE_URL).await;
-
-            // Spin up a task to listen to events
-            tokio::task::spawn_local(Polkadot::watch_event(api, tx, state.clone()));
-        })
-        .await;
 
     // CORS configuration
     let cors = CorsLayer::new()
-        // Allow all origins in development
         .allow_origin(Any)
-        // Allow common HTTP methods
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
-        // Allow common headers like Authorization
-        .allow_headers([http::header::AUTHORIZATION, http::header::CONTENT_TYPE]);
-    // Allow credentials if needed
-    // .allow_credentials(true);
+        .allow_headers(Any);
 
-    // Server config
+    // Server configuration
     let app = Router::new()
         .merge(routes::db_routes())
+        .merge(routes::trigger_routes())
         .merge(routes::console_routes())
         .merge(routes::ws_route())
         .merge(routes::docs_routes())
         .with_state(state.clone())
-        .layer(Extension(state)) // make `Triggr` available
-        .layer(cors) // Add CORS
+        .layer(Extension(state.clone()))
+        .layer(cors)
         .route("/health", get(|| async { "OK" }));
 
-    // Deploy server
     let server_address = "0.0.0.0:5190";
-    println!("Server running at {}", server_address);
-    axum::serve(TcpListener::bind(server_address).await.unwrap(), app)
-        .await
-        .unwrap();
+    let listener = TcpListener::bind(server_address).await.unwrap();
+
+    println!("🚀 Starting server at {}", server_address);
+
+    // Run both the watcher and the server inside the LocalSet
+    local
+        .run_until(async move {
+            // Spawn the !Send watcher locally
+            tokio::task::spawn_local(async move {
+                println!("🎯 Connecting to Polkadot node...");
+                let api = Polkadot::connect(CONTRACTS_NODE_URL).await;
+                println!("🔗 Connected. Starting event watcher...");
+                Polkadot::watch_event(api, tx, state.clone()).await;
+            });
+
+            // Start the Axum server
+            println!("🌐 HTTP server is running...");
+            if let Err(err) = axum::serve(listener, app).await {
+                eprintln!("Server error: {:?}", err);
+            }
+        })
+        .await;
 }
