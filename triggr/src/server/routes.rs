@@ -49,13 +49,13 @@ pub fn console_routes() -> Router<Triggr> {
 pub fn trigger_routes() -> Router<Triggr> {
     Router::new()
         .route("/api/trigger", post(trigger::save_trigger))
-        .route("/api/trigger/:contract_addr", get(trigger::list_triggers))
+        .route("/api/trigger/{contract_addr}", get(trigger::list_triggers))
         .route(
-            "/api/trigger/:contract_addr/:id",
+            "/api/trigger/{contract_addr}/{id}",
             get(trigger::get_trigger).delete(trigger::delete_trigger),
         )
         .route(
-            "/api/trigger/:contract_addr/:id/state",
+            "/api/trigger/{contract_addr}/{id}/state",
             put(trigger::update_trigger_state),
         )
 }
