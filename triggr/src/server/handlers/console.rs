@@ -275,9 +275,9 @@ pub async fn delete_project(
 ) -> Result<impl IntoResponse, AppError> {
     // Get API Key from public cypher id
     let encryption_key = env::var("TRIGGR_ENCRYPTION_KEY")
-        .or_else(|_| Err(AppError::NotFound("Project not found".into())))?;
+        .or_else(|_| Err(AppError::Internal("Encryption key not set in env.".into())))?;
     let decrypted_key = &decrypt(&api_key, &encryption_key)
-        .or_else(|_| Err(AppError::NotFound("Project not found".into())))?;
+        .or_else(|_| Err(AppError::Internal("Decryption failed".into())))?;
 
     // Use auth id to delete project
     let _ = ProjectStore::delete(&*triggr.store, &decrypted_key, &auth.claims.user_id)?;
@@ -307,9 +307,9 @@ pub async fn get_project(
 ) -> Result<impl IntoResponse, AppError> {
     // Get API Key from public cypher id
     let encryption_key = env::var("TRIGGR_ENCRYPTION_KEY")
-        .or_else(|_| Err(AppError::NotFound("Project not found".into())))?;
+        .or_else(|_| Err(AppError::Internal("Encryption key not set in env.".into())))?;
     let decrypted_key = &decrypt(&api_key, &encryption_key)
-        .or_else(|_| Err(AppError::NotFound("Project not found".into())))?;
+        .or_else(|_| Err(AppError::Internal("Decryption failed".into())))?;
 
     // Fetch and return projects
     let project =
