@@ -58,7 +58,6 @@ impl_storage_error_from!(
     &str,
     std::io::Error,
     FromUtf8Error,
-    Box<bincode::ErrorKind>,
     VarError,
     CryptoError
 );
