@@ -76,7 +76,15 @@ pub async fn list_collections(
     State(triggr): State<Triggr>,
     ref_project: RefProject,
 ) -> Result<impl IntoResponse, AppError> {
-    let cols = triggr.store.list_collections(&ref_project.project.id)?;
+    let cols = match triggr.store.list_collections(&ref_project.project.id) {
+        Ok(collections) => collections,
+        Err(StorageError::NotFound(_)) => {
+            // Return empty vec
+            vec![]
+        }
+        Err(e) => return Err(AppError::from(e)),
+    };
+
     Ok((
         StatusCode::OK,
         Json(json!({
@@ -126,7 +134,15 @@ pub async fn list_documents(
     Path(name): Path<String>,
     ref_project: RefProject,
 ) -> Result<impl IntoResponse, AppError> {
-    let docs = triggr.store.list(&ref_project.project.id, &name)?;
+    let docs = match triggr.store.list(&ref_project.project.id, &name) {
+        Ok(docs) => docs,
+        Err(StorageError::NotFound(_)) => {
+            // Return empty vec
+            vec![]
+        }
+        Err(e) => return Err(AppError::from(e)),
+    };
+    
     Ok((
         StatusCode::OK,
         Json(json!({
