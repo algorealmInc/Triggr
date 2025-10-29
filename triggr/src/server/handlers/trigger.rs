@@ -13,8 +13,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use utoipa::ToSchema;
 
+use super::{db::AppError, *};
 use crate::{dsl::DslParser, server::middleware::RefProject};
-use super::{*, db::AppError};
 
 /// Struct modelling trigger creation
 #[derive(Serialize, Deserialize, ToSchema)]
@@ -71,10 +71,7 @@ pub async fn save_trigger(
                 last_run: trigger.last_run,
             };
 
-            Ok((
-                StatusCode::CREATED,
-                Json(json!({ "data": slim }))
-            ))
+            Ok((StatusCode::CREATED, Json(json!({ "data": slim }))))
         }
         Err(err) => Err(AppError::Internal(err)),
     }
@@ -97,10 +94,14 @@ pub async fn list_triggers(
     State(triggr): State<Triggr>,
     Path(contract_addr): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
-    let triggers = triggr
-        .store
-        .list_triggers(&contract_addr)
-        .map_err(AppError::from)?;
+    let triggers = match triggr.store.list_triggers(&contract_addr) {
+        Ok(triggers) => triggers,
+        Err(StorageError::NotFound(_)) => {
+            // Return empty vec
+            vec![]
+        }
+        Err(e) => return Err(AppError::from(e)),
+    };
 
     let slim: Vec<SlimTrigger> = triggers
         .into_iter()

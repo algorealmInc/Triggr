@@ -216,7 +216,7 @@ pub async fn create_project(
             events = simplify_events(&metadata);
 
             // Save to high speed cache
-            cache.save_metadata(contract_addr, metadata);
+            cache.save_metadata(contract_addr.clone(), metadata);
         }
     }
 
@@ -226,6 +226,7 @@ pub async fn create_project(
         api_key: String::with_capacity(32),
         owner: auth.claims.user_id.clone(),
         description: description.clone(),
+        contract_address: contract_addr,
         contract_file_path: contract_file_path.clone(),
         contract_events: events.clone()
     };

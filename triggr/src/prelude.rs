@@ -304,8 +304,8 @@ pub struct Project {
     pub api_key: String,
     /// Project owners id
     pub owner: String,
-    // The address of the contracts node. (PassetHub for now)
-    // pub contracts_node_address: String,
+    /// The address of the contracts onchain.
+    pub contract_address: String,
     /// Description
     pub description: String,
     /// Location of contract metadata
