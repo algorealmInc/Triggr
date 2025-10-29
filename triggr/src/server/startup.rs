@@ -15,6 +15,9 @@ use tower_http::cors::{Any, CorsLayer};
 
 /// Configure the server and get it running.
 pub async fn run() {
+    use dotenvy::dotenv;
+    dotenv().ok(); // load from .env
+
     // Initialize shared system state.
     let state = Triggr::new();
 

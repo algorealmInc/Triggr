@@ -1,29 +1,28 @@
 // Copyright (c) 2025, Algorealm Inc.
 
-// This module contains all the important definitions that have are in a global namespace for Triggr.
+// This module contains all the important definitions that are in the global namespace for Triggr.
 
 #![allow(dead_code)]
 
 use async_trait::async_trait;
-use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::Value;
 use std::{collections::HashMap, env::VarError, string::FromUtf8Error, sync::Arc};
 use thiserror::Error;
-use tokio::sync::{mpsc::Receiver, RwLock};
+use tokio::sync::RwLock;
 use utoipa::ToSchema;
 
 use crate::{
     chain::{
-        polkadot::{prelude::EventData, util::{ContractMetadata, SimplifiedEvent}},
+        polkadot::util::{ContractMetadata, SimplifiedEvent},
         Blockchain,
     },
-    dsl::{Action, DslExecutor, Rule},
-    storage::{Sled, CollectionSummary},
+    dsl::Rule,
+    storage::{CollectionSummary, Sled},
     util::CryptoError,
 };
 
-/// Errors from internal node operations.
+/// Errors from internal database operations.
 #[derive(Debug, Error)]
 pub enum StorageError {
     #[error("Sled error: {0}")]
@@ -39,7 +38,7 @@ pub enum StorageError {
     Other(String),
 }
 
-// Macro to implement conversion from other types (e.g String) into StorageError
+// Macro to implement conversion from other types (e.g String) into StorageError.
 macro_rules! impl_storage_error_from {
     ($($t:ty),*) => {
         $(
@@ -52,7 +51,7 @@ macro_rules! impl_storage_error_from {
     };
 }
 
-// Make implementation
+// Implementations
 impl_storage_error_from!(
     String,
     &str,
@@ -100,9 +99,6 @@ pub struct Triggr {
 impl Triggr {
     /// Initialize system state.
     pub fn new() -> Self {
-        use dotenvy::dotenv;
-        dotenv().ok(); // load from .env
-
         let triggr = Self {
             store: Arc::new(Sled::new()),
             chains: Arc::new(Blockchain::default()),
@@ -123,7 +119,7 @@ impl Triggr {
 /// High speed cache to retrieve important data quickly.
 #[derive(Default)]
 pub struct HighSpeedCache {
-    /// Contract hash -> Contract metadata address on disk
+    /// Contract hash -> Contract metadata
     pub contract: HashMap<String, ContractMetadata>,
 }
 
@@ -134,7 +130,7 @@ impl HighSpeedCache {
         if let Ok(meta_entries) = store.get_metadata_entries() {
             for meta in meta_entries {
                 if let Ok(metadata) = self.load_n_serialize(&meta.path) {
-                    self.contract.insert(meta.addr, metadata);
+                    self.save_metadata(meta.addr, metadata);
                 }
             }
         }
@@ -154,7 +150,7 @@ impl HighSpeedCache {
         self.contract.insert(addr.to_lowercase(), data);
     }
 
-    /// Return inner contract structure.
+    /// Return inner cache structure.
     pub fn into_inner(&self) -> HashMap<String, ContractMetadata> {
         self.contract.clone()
     }
@@ -182,7 +178,13 @@ pub trait DocumentStore {
     /// # Returns
     /// * `Ok(())` if inserted successfully.
     /// * `Err` if insertion fails (e.g. collection not found).
-    async fn insert(&self, project_id: &str, collection: &str, doc: Document, update: bool) -> StorageResult<()>;
+    async fn insert(
+        &self,
+        project_id: &str,
+        collection: &str,
+        doc: Document,
+        update: bool,
+    ) -> StorageResult<()>;
 
     /// Retrieve a document by its ID.
     ///
@@ -282,7 +284,7 @@ pub struct Document {
     pub metadata: DocMetadata,
 }
 
-/// JSON structure to return to subscribed clients
+/// Response payload for subscribed clients.
 #[derive(Clone, Default, Serialize, Deserialize, ToSchema)]
 pub struct WsPayload {
     /// Type of operation performed
@@ -309,7 +311,7 @@ pub struct Project {
     /// Location of contract metadata
     pub contract_file_path: String,
     /// Events emmitted by contract
-    pub contract_events: Vec<SimplifiedEvent>
+    pub contract_events: Vec<SimplifiedEvent>,
 }
 
 /// Trait defining the behavior of a project store.
@@ -331,106 +333,6 @@ pub trait ProjectStore: Send + Sync {
     fn get_user_projects(&self, user_id: &str) -> StorageResult<Vec<Project>>;
 }
 
-/// Function to handle blockchain events and execute triggers.
-pub async fn handle_chain_events(triggr: Triggr, mut rx: Receiver<(String, EventData)>) {
-    // Recieve stream data
-    while let Some((contract_addr, event_data)) = rx.recv().await {
-        // Load triggers from db
-        if let Ok(triggers) = TriggerStore::list_triggers(&*triggr.store, &contract_addr) {
-            // Filter triggers based on event name
-            let triggers = triggers
-                .iter()
-                .filter(|t| t.rules.iter().any(|r| r.event_name == contract_addr))
-                .cloned()
-                .collect::<Vec<Trigger>>();
-
-            // Execute tiggers
-            for trigger in triggers {
-                tokio::task::spawn(execute_trigger(triggr.clone(), contract_addr.clone(), trigger, event_data.clone()));
-            }
-        }
-    }
-}
-
-/// Function to execute trigger.
-async fn execute_trigger(triggr: Triggr, contract_addr: String, mut trigger: Trigger, event: EventData) {
-    // Get actions to execute
-    let actions = trigger
-        .rules
-        .iter()
-        .filter_map(|rule| DslExecutor::execute_rule(rule, &event))
-        .flatten()
-        .collect::<Vec<Action>>();
-
-    for action in actions {
-        let _ = execute_actions(triggr.clone(), &trigger.project_id, action).await;
-
-        // Update modified timestamp
-        let mut updated_trigger = trigger.clone();
-        updated_trigger.last_run = Utc::now().timestamp_millis() as u64;
-
-        // Save trigger
-        let _ = TriggerStore::store_trigger(&*triggr.store, &contract_addr, updated_trigger);
-    }
-}
-
-/// Function to execute database actions
-async fn execute_actions(triggr: Triggr, project_id: &str, action: Action) {
-    // Unix timestamp
-    let now = Utc::now().timestamp_millis() as u64;
-    match action {
-        // Update database
-        Action::Update {
-            collection,
-            id,
-            fields,
-        } => {
-            // Construct document
-            let doc = Document {
-                id,
-                data: json!(fields),
-                metadata: DocMetadata {
-                    created_at: now,
-                    updated_at: now,
-                    version: None,
-                    tags: Default::default(),
-                },
-            };
-
-            // Execute database operation
-            let _ = DocumentStore::update(&*triggr.store, project_id, &collection, doc).await;
-        }
-        // Delete database entry
-        Action::Delete { collection, id } => {
-            let _ = DocumentStore::delete(&*triggr.store, project_id, &collection, &id).await;
-        }
-        // Insert into database
-        Action::Insert {
-            id,
-            collection,
-            fields,
-        } => {
-            // Construct document
-            let doc = Document {
-                id,
-                data: json!(fields),
-                metadata: DocMetadata {
-                    created_at: now,
-                    updated_at: now,
-                    version: None,
-                    tags: Default::default(),
-                },
-            };
-
-            // Execute database operation
-            let _ = DocumentStore::update(&*triggr.store, project_id, &collection, doc).await;
-        }
-
-        // To be implemented in the future
-        Action::Notify { .. } => {}
-    }
-}
-
 /// Struct that describes a trigger.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Trigger {
@@ -450,7 +352,7 @@ pub struct Trigger {
     pub last_run: u64,
 }
 
-/// Struct that describes a trigger and does not contain the parsed rules.
+/// Streamlined trigger to return as payload.
 #[derive(Clone, Serialize, Deserialize, ToSchema)]
 pub struct SlimTrigger {
     pub id: String,
@@ -467,7 +369,7 @@ pub struct SlimTrigger {
 
 /// Trait to handle trigger operations internally.
 pub trait TriggerStore {
-    /// Store trigger
+    /// Store trigger.
     fn store_trigger(&self, contract_addr: &str, trigger: Trigger) -> StorageResult<()>;
 
     /// Return trigger.
