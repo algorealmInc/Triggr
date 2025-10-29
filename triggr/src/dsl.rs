@@ -755,38 +755,3 @@ impl DslExecutor {
         Some(rule.actions.clone())
     }
 }
-
-/// Builder for creating Dsl scripts programmatically
-pub struct ScriptBuilder {
-    events: Vec<EventDefinition>,
-    rules: Vec<Rule>,
-}
-
-impl ScriptBuilder {
-    pub fn new() -> Self {
-        Self {
-            events: Vec::new(),
-            rules: Vec::new(),
-        }
-    }
-    
-    pub fn add_event(mut self, name: &str, fields: Vec<&str>) -> Self {
-        self.events.push(EventDefinition {
-            name: name.to_string(),
-            fields: fields.iter().map(|s| s.to_string()).collect(),
-        });
-        self
-    }
-    
-    pub fn add_rule(mut self, rule: Rule) -> Self {
-        self.rules.push(rule);
-        self
-    }
-    
-    pub fn build(self) -> Script {
-        Script {
-            events: self.events,
-            rules: self.rules,
-        }
-    }
-}
