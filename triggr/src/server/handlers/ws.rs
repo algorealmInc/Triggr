@@ -1,6 +1,6 @@
 // Copyright (c) 2025, Algorealm Inc.
 
-// This module contains code to handle websockets request and responses.
+// This module handles websockets request and responses.
 
 use super::*;
 use axum::extract::ws::Message;

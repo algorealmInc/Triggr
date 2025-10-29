@@ -1,10 +1,12 @@
-// Apache 2.0 License
 // Copyright (c) 2025, Algorealm Inc.
+
+// Swagger docs
 
 use super::*;
 use crate::server::handlers::{
     console::CreateProjectResponse,
-    trigger::StoreTrigger
+    trigger::StoreTrigger,
+    storage::CollectionSummary
 };
 
 use utoipa::OpenApi;
@@ -15,7 +17,7 @@ use utoipa::OpenApi;
         console::login, console::create_project, console::delete_project, console::list_projects,
         trigger::save_trigger, trigger::list_triggers, trigger::get_trigger, trigger::delete_trigger, trigger::update_trigger_state
     ),
-    components(schemas(Document, DocMetadata, Project, CreateProjectResponse, StoreTrigger, SlimTrigger)),
+    components(schemas(Document, DocMetadata, Project, CreateProjectResponse, StoreTrigger, SlimTrigger, CollectionSummary)),
     tags(
         (name = "Docs", description = "Document REST endpoints")
     )

@@ -1,12 +1,14 @@
 // Copyright (c) 2025, Algorealm Inc.
 
-// Module containing handlers to handle trigger requests.
+// Module containing handlers for trigger requests.
+
 use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
 };
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use utoipa::ToSchema;
@@ -35,7 +37,7 @@ pub struct StoreTrigger {
     )
 )]
 pub async fn save_trigger(
-    _ref_project: RefProject,
+    ref_project: RefProject,
     State(triggr): State<Triggr>,
     Json(data): Json<StoreTrigger>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -46,10 +48,11 @@ pub async fn save_trigger(
             let trigger = Trigger {
                 id: data.id.clone(),
                 dsl: data.trigger.clone(),
+                project_id: ref_project.project.id,
                 description: data.description.clone(),
                 rules: script.rules,
                 active: true,
-                created: chrono::Utc::now().timestamp_millis() as u64,
+                created: Utc::now().timestamp_millis() as u64,
                 last_run: 0,
             };
 

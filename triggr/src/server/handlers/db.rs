@@ -1,10 +1,11 @@
 // Copyright (c) 2025, Algorealm Inc.
 
-// This module contains HTTP(S) route handlers to perform internal database operations.
+// This module contains HTTP(S) route handlers to perform database operations.
 
 use crate::{
     prelude::{Document, DocumentStore, StorageError, Triggr},
     server::middleware::RefProject,
+    storage::CollectionSummary
 };
 use axum::{
     extract::{Path, State},
@@ -67,7 +68,7 @@ impl<T> OptionExt<T> for Option<T> {
     get,
     path = "/api/db/collections",
     responses(
-        (status = 200, description = "List of collections for the project", body = [String]),
+        (status = 200, description = "List of collections for the project", body = [CollectionSummary]),
         (status = 500, description = "Internal server error")
     )
 )]
@@ -104,7 +105,7 @@ pub async fn insert_document(
     Path(name): Path<String>,
     Json(doc): Json<Document>,
 ) -> Result<impl IntoResponse, AppError> {
-    DocumentStore::insert(&*triggr.store, &ref_project.project.id, &name, doc).await?;
+    DocumentStore::insert(&*triggr.store, &ref_project.project.id, &name, doc, false).await?;
     Ok((StatusCode::CREATED, Json(json!({ "ok": true }))))
 }
 

@@ -1,29 +1,31 @@
 // Copyright (c) 2025, Algorealm Inc.
 
+// This module configures and starts the database server. 
+// It connects to a Polkadot Contracts Node (Paseo) to listen for contracts events and pass it internally for handling.
+
 use super::*;
 use crate::{
     chain::polkadot::{prelude::CONTRACTS_NODE_URL, Polkadot},
     server::routes,
 };
-use axum::{
-    http::{self, Method},
-    routing::get,
-    Extension, Router,
-};
-use tokio::sync::mpsc;
+use axum::{http::Method, routing::get, Extension, Router};
 use tokio::net::TcpListener;
+use tokio::sync::mpsc;
 use tower_http::cors::{Any, CorsLayer};
 
 /// Configure the server and get it running.
 pub async fn run() {
+    use dotenvy::dotenv;
+    dotenv().ok(); // load from .env
+
     // Initialize shared system state.
     let state = Triggr::new();
 
     // Create one-way channel to send decoded event from the listener task to the database
     let (tx, rx) = mpsc::channel(100);
 
-    // Spin up a task to listen to blockchain events and execute triggers configure for them
-    tokio::task::spawn(handle_chain_events(rx));
+    // Spin up a task to listen to blockchain events and execute triggers configured to respond to them
+    tokio::task::spawn(handle_chain_events(state.clone(), rx));
 
     // Create LocalSet for !Send futures
     let local = tokio::task::LocalSet::new();

@@ -1,12 +1,13 @@
 // Copyright (c) 2025, Algorealm Inc.
 
+// This module contains all operations and data structures involving to interact with a Polkadot chain.
+
 use scale_value::Value;
 use substrate_api_client::{
     ac_primitives::DefaultRuntimeConfig, rpc::JsonrpseeClient, Api, SubscribeEvents,
 };
 use tokio::sync::mpsc::Sender;
 
-pub mod decode;
 pub mod prelude;
 pub mod util;
 
@@ -19,7 +20,7 @@ use crate::{chain::polkadot::util::*, prelude::Triggr};
 pub struct Polkadot;
 
 impl Polkadot {
-    /// Connect to Passethub and listen for event changes
+    /// Connect to a contracts node and listen for event changes
     pub async fn connect(address: &str) -> Api<DefaultRuntimeConfig, JsonrpseeClient> {
         println!("Connecting to {}", address);
 
@@ -37,7 +38,7 @@ impl Polkadot {
     /// Watch event and decode it before sending it to database layer.
     pub async fn watch_event(
         api: Api<DefaultRuntimeConfig, JsonrpseeClient>,
-        tx: Sender<EventData>,
+        tx: Sender<(String, EventData)>,
         triggr: Triggr,
     ) {
         // Subscribe to events
@@ -82,7 +83,7 @@ impl Polkadot {
 
                                                     println!(
                                                         "   📍 Contract Address: 0x{}",
-                                                        hex::encode(&contract_address)
+                                                        addr_bytes
                                                     );
                                                     println!(
                                                         "   📦 Event Data (hex): 0x{}",
@@ -94,12 +95,14 @@ impl Polkadot {
                                                     if let Some(metadata) =
                                                         cache.contract.get(&addr_bytes)
                                                     {
-                                                        // Decode contract event
+                                                        // Decode contract event and send to handler
                                                         decode_contract_event_with_metadata(
                                                             tx.clone(),
+                                                            addr_bytes,
                                                             &event_bytes,
                                                             metadata,
-                                                        ).await;
+                                                        )
+                                                        .await;
                                                     }
                                                 }
                                             }

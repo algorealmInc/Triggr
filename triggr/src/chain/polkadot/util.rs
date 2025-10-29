@@ -1,13 +1,16 @@
 // Copyright (c) 2025, Algorealm Inc.
 
+// This module contains important utilites to interface with a polkadot chain.
+
 use std::collections::HashMap;
 
-use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc::Sender;
-use utoipa::ToSchema;
-use scale_value::{Value, ValueDef, Composite, Primitive};
-use serde_json::{json, Value as JsonValue};
 use parity_scale_codec::Decode;
+use scale_value::{Composite, Primitive, Value, ValueDef};
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value as JsonValue};
+use tokio::sync::mpsc::Sender;
+use tracing::info;
+use utoipa::ToSchema;
 
 use crate::chain::polkadot::prelude::EventData;
 
@@ -58,7 +61,7 @@ struct TypeDefDetails {
     def: serde_json::Value,
 }
 /// Simplified output structure
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Deserialize, Serialize, ToSchema, Clone)]
 pub struct SimplifiedEvent {
     label: String,
     args: Vec<String>,
@@ -72,18 +75,21 @@ pub fn extract_bytes_from_nested(value: &Value<u32>) -> Option<Vec<u8>> {
             if fields.len() == 1 {
                 return extract_bytes_from_nested(&fields[0]);
             }
-            
+
             // Check if this is a byte array
             if is_byte_array(fields) {
-                let bytes: Vec<u8> = fields.iter().filter_map(|v| {
-                    if let ValueDef::Primitive(Primitive::U128(n)) = &v.value {
-                        if *n <= 255 {
-                            return Some(*n as u8);
+                let bytes: Vec<u8> = fields
+                    .iter()
+                    .filter_map(|v| {
+                        if let ValueDef::Primitive(Primitive::U128(n)) = &v.value {
+                            if *n <= 255 {
+                                return Some(*n as u8);
+                            }
                         }
-                    }
-                    None
-                }).collect();
-                
+                        None
+                    })
+                    .collect();
+
                 if bytes.len() == fields.len() {
                     return Some(bytes);
                 }
@@ -94,18 +100,18 @@ pub fn extract_bytes_from_nested(value: &Value<u32>) -> Option<Vec<u8>> {
     }
 }
 
-
 fn is_byte_array(fields: &[Value<u32>]) -> bool {
-    !fields.is_empty() && fields.iter().all(|v| {
-        matches!(&v.value, ValueDef::Primitive(Primitive::U128(n)) if *n <= 255)
-    })
+    !fields.is_empty()
+        && fields
+            .iter()
+            .all(|v| matches!(&v.value, ValueDef::Primitive(Primitive::U128(n)) if *n <= 255))
 }
 
 /// Main function to convert ContractMetadata to SimplifiedEvents
 pub fn simplify_events(metadata: &ContractMetadata) -> Vec<SimplifiedEvent> {
     // Build a type lookup map
     let type_map = build_type_map(&metadata.types);
-    
+
     // Process each event
     metadata
         .spec
@@ -125,12 +131,12 @@ pub fn simplify_events(metadata: &ContractMetadata) -> Vec<SimplifiedEvent> {
 /// Build a map of type_id to resolved type name
 fn build_type_map(types: &[TypeDef]) -> HashMap<u32, String> {
     let mut map = HashMap::new();
-    
+
     for type_def in types {
         let type_name = resolve_type_name(&type_def.type_def);
         map.insert(type_def.id, type_name);
     }
-    
+
     map
 }
 
@@ -142,7 +148,7 @@ fn resolve_type_name(details: &TypeDefDetails) -> String {
             return prim_str.to_string();
         }
     }
-    
+
     // Check if it has a path (named type)
     if let Some(path) = &details.path {
         if !path.is_empty() {
@@ -150,7 +156,7 @@ fn resolve_type_name(details: &TypeDefDetails) -> String {
             return path.last().unwrap().clone();
         }
     }
-    
+
     // Check for composite types
     if details.def.get("composite").is_some() {
         if let Some(path) = &details.path {
@@ -160,7 +166,7 @@ fn resolve_type_name(details: &TypeDefDetails) -> String {
         }
         return "composite".to_string();
     }
-    
+
     // Check for variant types (like Result, Option)
     if details.def.get("variant").is_some() {
         if let Some(path) = &details.path {
@@ -170,7 +176,7 @@ fn resolve_type_name(details: &TypeDefDetails) -> String {
         }
         return "variant".to_string();
     }
-    
+
     // Check for array types
     if let Some(array_def) = details.def.get("array") {
         if let Some(len) = array_def.get("len") {
@@ -178,12 +184,12 @@ fn resolve_type_name(details: &TypeDefDetails) -> String {
         }
         return "array".to_string();
     }
-    
+
     // Check for tuple types
     if details.def.get("tuple").is_some() {
         return "tuple".to_string();
     }
-    
+
     // Default fallback
     "unknown".to_string()
 }
@@ -198,7 +204,7 @@ fn format_event_arg(arg: &EventArg, type_map: &HashMap<u32, String>) -> String {
     } else {
         format!("type_{}", arg.type_info.type_id)
     };
-    
+
     // Format as "name: type" with indexed indicator if applicable
     if arg.indexed {
         format!("{}: {} (indexed)", arg.label, type_name)
@@ -208,7 +214,9 @@ fn format_event_arg(arg: &EventArg, type_map: &HashMap<u32, String>) -> String {
 }
 
 /// Convenience function to deserialize and simplify from JSON string
-pub fn simplify_events_from_json(json_str: &str) -> Result<Vec<SimplifiedEvent>, serde_json::Error> {
+pub fn simplify_events_from_json(
+    json_str: &str,
+) -> Result<Vec<SimplifiedEvent>, serde_json::Error> {
     let metadata: ContractMetadata = serde_json::from_str(json_str)?;
     Ok(simplify_events(&metadata))
 }
@@ -250,21 +258,26 @@ pub fn composite_to_json(composite: &Composite<u32>) -> JsonValue {
         Composite::Unnamed(fields) => {
             // Check if this is a byte array that should be converted to hex
             if is_byte_array(fields) {
-                let bytes: Vec<u8> = fields.iter().filter_map(|v| {
-                    if let ValueDef::Primitive(Primitive::U128(n)) = &v.value {
-                        if *n <= 255 {
-                            return Some(*n as u8);
+                let bytes: Vec<u8> = fields
+                    .iter()
+                    .filter_map(|v| {
+                        if let ValueDef::Primitive(Primitive::U128(n)) = &v.value {
+                            if *n <= 255 {
+                                return Some(*n as u8);
+                            }
                         }
-                    }
-                    None
-                }).collect();
-                
+                        None
+                    })
+                    .collect();
+
                 if bytes.len() == fields.len() {
                     // Check if it looks like an AccountId (32 bytes) or other common types
                     if bytes.len() == 32 {
                         // Try to decode as string first (for pallet names, etc.)
                         if let Ok(s) = std::str::from_utf8(&bytes) {
-                            if s.chars().all(|c| c.is_ascii_alphanumeric() || c == '\0' || c.is_ascii_whitespace()) {
+                            if s.chars().all(|c| {
+                                c.is_ascii_alphanumeric() || c == '\0' || c.is_ascii_whitespace()
+                            }) {
                                 let trimmed = s.trim_end_matches('\0');
                                 if !trimmed.is_empty() {
                                     return json!({
@@ -288,13 +301,12 @@ pub fn composite_to_json(composite: &Composite<u32>) -> JsonValue {
                     }
                 }
             }
-            
+
             // Recursively decode the array
             JsonValue::Array(fields.iter().map(|v| value_to_json(v)).collect())
         }
     }
 }
-
 
 pub fn primitive_to_json(primitive: &Primitive) -> JsonValue {
     match primitive {
@@ -309,48 +321,50 @@ pub fn primitive_to_json(primitive: &Primitive) -> JsonValue {
 }
 
 // Decode contract event bytes using contract metadata
-pub async fn decode_contract_event_with_metadata(tx: Sender<EventData>, bytes: &[u8], metadata: &ContractMetadata) {
+pub async fn decode_contract_event_with_metadata(
+    tx: Sender<(String, EventData)>,
+    contract_addr: String,
+    bytes: &[u8],
+    metadata: &ContractMetadata,
+) {
     if bytes.is_empty() {
-        println!("      Empty event data");
+        info!("      Empty event data");
         return;
     }
-    
+
     let mut cursor = &bytes[..];
-    
+
     // First byte is the event selector
     let selector = match u8::decode(&mut cursor) {
         Ok(s) => s,
         Err(e) => {
-            println!("      ❌ Failed to decode selector: {:?}", e);
+            info!("      ❌ Failed to decode selector: {:?}", e);
             return;
         }
     };
-    
-    println!("      Selector: 0x{:02x}", selector);
-    
+
+    info!("      Selector: 0x{:02x}", selector);
+
     // Try to find matching event by trying to decode with each event spec
     for event_spec in &metadata.spec.events {
-        println!("      Trying event: {}", event_spec.label);
-        
+        info!("      Trying event: {}", event_spec.label);
+
         let mut decode_cursor = cursor;
         let mut decoded_fields = HashMap::new();
         let mut success = true;
-        
+
         // In this implementation, ALL fields (indexed and non-indexed) are in the data
         // This differs from standard Substrate events where indexed fields are in topics
         for arg in &event_spec.args {
-            let field_result = decode_field_by_type(
-                &mut decode_cursor,
-                arg.type_info.type_id,
-                metadata,
-            );
-            
+            let field_result =
+                decode_field_by_type(&mut decode_cursor, arg.type_info.type_id, metadata);
+
             match field_result {
                 Ok(value) => {
                     decoded_fields.insert(arg.label.clone(), value);
                 }
                 Err(e) => {
-                    println!("        ❌ Failed to decode field '{}': {:?}", arg.label, e);
+                    info!("        ❌ Failed to decode field '{}': {:?}", arg.label, e);
                     success = false;
                     break;
                 }
@@ -359,64 +373,69 @@ pub async fn decode_contract_event_with_metadata(tx: Sender<EventData>, bytes: &
 
         // Gather event args
         let mut event_args: HashMap<String, JsonValue> = HashMap::new();
-        
+
         if success && decode_cursor.is_empty() {
-            println!("      ✅ Successfully decoded as event: {}", event_spec.label);
+            info!(
+                "      ✅ Successfully decoded as event: {}",
+                event_spec.label
+            );
             for arg in &event_spec.args {
                 if let Some(value) = decoded_fields.get(&arg.label) {
                     let indexed_marker = if arg.indexed { " (indexed)" } else { "" };
-                    println!("        {}{}: {}", arg.label, indexed_marker, value);
+                    info!("        {}{}: {}", arg.label, indexed_marker, value);
 
                     event_args.insert(arg.label.clone(), parse_event_string(value));
                 }
             }
 
-
             // Push into queue for the database to execute it's trigger rules
             let event_data = EventData {
                 event_name: event_spec.label.clone(),
-                fields: event_args
+                fields: event_args,
             };
 
             // Push into stream
-            tx.send(event_data).await;
+            let _ = tx.send((contract_addr, event_data)).await;
 
             return;
         } else if !success {
             // Reset and try next event
             continue;
         } else if !decode_cursor.is_empty() {
-            println!("        ⚠️ Extra bytes remaining after decode: {} bytes", decode_cursor.len());
+            info!(
+                "        ⚠️ Extra bytes remaining after decode: {} bytes",
+                decode_cursor.len()
+            );
         }
     }
-    
-    println!("      ⚠️ Could not match event to metadata");
-    println!("      Raw data analysis:");
-    
+
+    info!("      ⚠️ Could not match event to metadata");
+    info!("      Raw data analysis:");
+
     // Try to manually decode to help debug
     let mut manual_cursor = cursor;
-    println!("        Attempting manual decode:");
-    
+    info!("        Attempting manual decode:");
+
     // Try H160 (20 bytes)
     if manual_cursor.len() >= 20 {
         if let Ok(addr_bytes) = <[u8; 20]>::decode(&mut manual_cursor) {
-            println!("        Possible H160: 0x{}", hex::encode(addr_bytes));
+            info!("        Possible H160: 0x{}", hex::encode(addr_bytes));
         }
     }
-    
+
     // Try u128
     if manual_cursor.len() >= 16 {
         if let Ok(val) = u128::decode(&mut manual_cursor) {
-            println!("        Possible u128: {}", val);
+            info!("        Possible u128: {}", val);
         }
     }
-    
+
     // Try String
     if let Ok(s) = String::decode(&mut manual_cursor) {
-        println!("        Possible String: {:?}", s);
+        info!("        Possible String: {:?}", s);
     }
-    
-    println!("      Remaining bytes: 0x{}", hex::encode(cursor));
+
+    info!("      Remaining bytes: 0x{}", hex::encode(cursor));
 }
 
 fn decode_field_by_type(
@@ -425,10 +444,12 @@ fn decode_field_by_type(
     metadata: &ContractMetadata,
 ) -> Result<String, String> {
     // Find the type definition
-    let type_def = metadata.types.iter()
+    let type_def = metadata
+        .types
+        .iter()
         .find(|t| t.id == type_id)
         .ok_or_else(|| format!("Type {} not found", type_id))?;
-    
+
     // Handle primitive types
     if let Some(def) = type_def.type_def.def.get("primitive") {
         if let Some(prim_type) = def.as_str() {
@@ -454,8 +475,8 @@ fn decode_field_by_type(
                     Ok(val.to_string())
                 }
                 "u8" => {
-                    let val = u8::decode(cursor)
-                        .map_err(|e| format!("Failed to decode u8: {:?}", e))?;
+                    let val =
+                        u8::decode(cursor).map_err(|e| format!("Failed to decode u8: {:?}", e))?;
                     Ok(val.to_string())
                 }
                 "i128" => {
@@ -479,8 +500,8 @@ fn decode_field_by_type(
                     Ok(val.to_string())
                 }
                 "i8" => {
-                    let val = i8::decode(cursor)
-                        .map_err(|e| format!("Failed to decode i8: {:?}", e))?;
+                    let val =
+                        i8::decode(cursor).map_err(|e| format!("Failed to decode i8: {:?}", e))?;
                     Ok(val.to_string())
                 }
                 "str" => {
@@ -493,19 +514,20 @@ fn decode_field_by_type(
                         .map_err(|e| format!("Failed to decode bool: {:?}", e))?;
                     Ok(val.to_string())
                 }
-                _ => Err(format!("Unknown primitive type: {}", prim_type))
+                _ => Err(format!("Unknown primitive type: {}", prim_type)),
             };
         }
     }
-    
+
     // Handle arrays
     if let Some(def) = type_def.type_def.def.get("array") {
         if let (Some(len), Some(inner_type)) = (def.get("len"), def.get("type")) {
             let array_len = len.as_u64().ok_or("Invalid array length")? as usize;
             let inner_type_id = inner_type.as_u64().ok_or("Invalid inner type")? as u32;
-            
+
             // Special case for byte arrays (common for addresses/hashes)
-            if inner_type_id == 10 { // u8 type
+            if inner_type_id == 10 {
+                // u8 type
                 let mut bytes = vec![0u8; array_len];
                 for i in 0..array_len {
                     bytes[i] = u8::decode(cursor)
@@ -513,7 +535,7 @@ fn decode_field_by_type(
                 }
                 return Ok(format!("0x{}", hex::encode(bytes)));
             }
-            
+
             // Generic array decoding
             let mut values = Vec::new();
             for _ in 0..array_len {
@@ -523,7 +545,7 @@ fn decode_field_by_type(
             return Ok(format!("[{}]", values.join(", ")));
         }
     }
-    
+
     // Handle composite types (structs)
     if let Some(def) = type_def.type_def.def.get("composite") {
         if let Some(fields) = def.get("fields") {
@@ -538,14 +560,14 @@ fn decode_field_by_type(
                         }
                     }
                 }
-                
+
                 // Multiple fields - decode each
                 let mut field_values = Vec::new();
                 for field in fields_array {
                     if let Some(inner_type) = field.get("type") {
                         let inner_type_id = inner_type.as_u64().ok_or("Invalid type")? as u32;
                         let val = decode_field_by_type(cursor, inner_type_id, metadata)?;
-                        
+
                         if let Some(name) = field.get("name") {
                             if let Some(name_str) = name.as_str() {
                                 field_values.push(format!("{}: {}", name_str, val));
@@ -561,59 +583,72 @@ fn decode_field_by_type(
             }
         }
     }
-    
+
     // Handle variant types (enums)
     if let Some(def) = type_def.type_def.def.get("variant") {
         if let Some(variants) = def.get("variants") {
             if let Some(variants_array) = variants.as_array() {
                 // Check if this is an Option type - it might encode Some without discriminant for indexed fields
-                let is_option = type_def.type_def.path.as_ref()
+                let is_option = type_def
+                    .type_def
+                    .path
+                    .as_ref()
                     .map(|p| p.contains(&"Option".to_string()))
                     .unwrap_or(false);
-                
+
                 // Decode discriminant
                 let discriminant = u8::decode(cursor)
                     .map_err(|e| format!("Failed to decode variant discriminant: {:?}", e))?;
-                
+
                 // Find matching variant
                 for variant in variants_array {
                     if let Some(index) = variant.get("index") {
                         if index.as_u64() == Some(discriminant as u64) {
                             if let Some(name) = variant.get("name") {
                                 let variant_name = name.as_str().unwrap_or("Unknown");
-                                
+
                                 // Check if variant has fields
                                 if let Some(fields) = variant.get("fields") {
                                     if let Some(fields_array) = fields.as_array() {
                                         if fields_array.is_empty() {
                                             return Ok(variant_name.to_string());
                                         }
-                                        
+
                                         // Decode variant fields
                                         let mut field_values = Vec::new();
                                         for field in fields_array {
                                             if let Some(field_type) = field.get("type") {
-                                                let field_type_id = field_type.as_u64()
-                                                    .ok_or("Invalid field type")? as u32;
-                                                let val = decode_field_by_type(cursor, field_type_id, metadata)?;
+                                                let field_type_id = field_type
+                                                    .as_u64()
+                                                    .ok_or("Invalid field type")?
+                                                    as u32;
+                                                let val = decode_field_by_type(
+                                                    cursor,
+                                                    field_type_id,
+                                                    metadata,
+                                                )?;
                                                 field_values.push(val);
                                             }
                                         }
-                                        
+
                                         if field_values.is_empty() {
                                             return Ok(variant_name.to_string());
                                         } else {
-                                            return Ok(format!("{}({})", variant_name, field_values.join(", ")));
+                                            return Ok(format!(
+                                                "{}({})",
+                                                variant_name,
+                                                field_values.join(", ")
+                                            ));
                                         }
                                     }
                                 }
-                                
+
                                 return Ok(variant_name.to_string());
                             }
                         }
                     }
                 }
-                
+
                 // If we reach here and it's an Option, try assuming Some(T) without discriminant
                 // This happens in ink! indexed fields sometimes
                 if is_option {
@@ -622,7 +657,7 @@ fn decode_field_by_type(
                     let mut temp_buffer = vec![discriminant];
                     temp_buffer.extend_from_slice(cursor);
                     let mut temp_cursor = &temp_buffer[..];
-                    
+
                     // Try to decode the inner type (assuming Some variant has one field)
                     for variant in variants_array {
                         if let Some(name) = variant.get("name") {
@@ -631,12 +666,19 @@ fn decode_field_by_type(
                                     if let Some(fields_array) = fields.as_array() {
                                         if let Some(field) = fields_array.get(0) {
                                             if let Some(field_type) = field.get("type") {
-                                                let field_type_id = field_type.as_u64()
-                                                    .ok_or("Invalid field type")? as u32;
-                                                match decode_field_by_type(&mut temp_cursor, field_type_id, metadata) {
+                                                let field_type_id = field_type
+                                                    .as_u64()
+                                                    .ok_or("Invalid field type")?
+                                                    as u32;
+                                                match decode_field_by_type(
+                                                    &mut temp_cursor,
+                                                    field_type_id,
+                                                    metadata,
+                                                ) {
                                                     Ok(val) => {
                                                         // Success! Update the original cursor
-                                                        let consumed = temp_buffer.len() - temp_cursor.len();
+                                                        let consumed =
+                                                            temp_buffer.len() - temp_cursor.len();
                                                         *cursor = &cursor[consumed - 1..]; // -1 because we added discriminant
                                                         return Ok(format!("Some({})", val));
                                                     }
@@ -652,12 +694,12 @@ fn decode_field_by_type(
                         }
                     }
                 }
-                
+
                 return Err(format!("Unknown variant discriminant: {}", discriminant));
             }
         }
     }
-    
+
     // Handle tuple types
     if let Some(def) = type_def.type_def.def.get("tuple") {
         if let Some(tuple_array) = def.as_array() {
@@ -665,7 +707,7 @@ fn decode_field_by_type(
                 // Unit type ()
                 return Ok("()".to_string());
             }
-            
+
             let mut values = Vec::new();
             for item in tuple_array {
                 if let Some(type_id_val) = item.as_u64() {
@@ -676,83 +718,87 @@ fn decode_field_by_type(
             return Ok(format!("({})", values.join(", ")));
         }
     }
-    
+
     // Handle sequence types (Vec)
     if let Some(def) = type_def.type_def.def.get("sequence") {
         if let Some(inner_type) = def.get("type") {
             let inner_type_id = inner_type.as_u64().ok_or("Invalid sequence type")? as u32;
-            
+
             // Decode compact-encoded length
             let length = parity_scale_codec::Compact::<u32>::decode(cursor)
                 .map_err(|e| format!("Failed to decode Vec length: {:?}", e))?;
-            
+
             let mut values = Vec::new();
             for _ in 0..length.0 {
                 let val = decode_field_by_type(cursor, inner_type_id, metadata)?;
                 values.push(val);
             }
-            
+
             return Ok(format!("Vec[{}]", values.join(", ")));
         }
     }
-    
-    Err(format!("Unsupported type definition: {:?}", type_def.type_def.def))
+
+    Err(format!(
+        "Unsupported type definition: {:?}",
+        type_def.type_def.def
+    ))
 }
 
 /// Parse an event string value into a JSON value
-/// 
+///
 /// Supports:
 /// - Option<T>: Some(value) -> value, None -> null
 /// - AccountID/Address: 0x... -> string
 /// - Integers: 123 -> number (or string for large numbers)
 /// - Strings: "text" -> string
-/// 
+///
 /// # Arguments
 /// * `value` - String representation of the value
-/// 
+///
 /// # Returns
 /// Parsed JSON value
 pub fn parse_event_string(value: &str) -> JsonValue {
     let trimmed = value.trim();
-    
+
     // Handle empty string
     if trimmed.is_empty() {
         return JsonValue::Null;
     }
-    
+
     // Handle Option types: Some(value) or None
     if trimmed.starts_with("Some(") && trimmed.ends_with(')') {
         let inner = &trimmed[5..trimmed.len() - 1];
         return parse_event_string(inner);
     }
-    
+
     if trimmed == "None" {
         return JsonValue::Null;
     }
-    
+
     // Handle AccountID/Address (0x...)
     if trimmed.starts_with("0x") {
         return JsonValue::String(trimmed.to_string());
     }
-    
+
     // Handle quoted strings
     if (trimmed.starts_with('"') && trimmed.ends_with('"'))
-        || (trimmed.starts_with('\'') && trimmed.ends_with('\'')) {
+        || (trimmed.starts_with('\'') && trimmed.ends_with('\''))
+    {
         let unquoted = &trimmed[1..trimmed.len() - 1];
         return JsonValue::String(unquoted.to_string());
     }
-    
+
     // Handle large integers (keep as string to avoid precision loss)
     // U256 and similar large numbers should be strings
     if trimmed.chars().all(|c| c.is_ascii_digit()) && trimmed.len() > 15 {
         return JsonValue::String(trimmed.to_string());
     }
-    
+
     // Handle regular integers
     if let Ok(num) = trimmed.parse::<i64>() {
         return json!(num);
     }
-    
+
     // Default: return as string
     JsonValue::String(trimmed.to_string())
 }

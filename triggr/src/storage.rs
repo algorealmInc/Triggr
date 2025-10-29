@@ -4,12 +4,14 @@
 // We are using sled for the internal database storage. This is because it is fast and composable in a single binary.
 // No external (network) dependencies.
 
-use crate::{dsl::Rule, util::encrypt};
+use crate::util::encrypt;
 
 use super::*;
 use async_trait::async_trait;
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use sled::{Db, IVec};
+use utoipa::ToSchema;
 use std::{collections::HashMap, env, fs, path::Path, sync::Arc};
 use tokio::sync::{
     broadcast::{self, Receiver, Sender},
@@ -21,6 +23,14 @@ use tokio::sync::{
 pub struct Metadata {
     pub addr: String,
     pub path: String,
+}
+
+/// Summary statistics for a collection.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct CollectionSummary {
+    pub name: String,
+    pub count: usize,
+    pub last_updated: u64,
 }
 
 /// Subscriptions to track topics and help broadcast database changes to clients.
@@ -145,10 +155,12 @@ impl Sled {
     /// Helper function that receives a user ID and stores the API keys
     /// of projects associated with it.
     pub fn add_user_project(&self, user_id: &str, project: Project) -> StorageResult<()> {
-        let mut projects: Vec<Project> = if let Some(value) = self.users.get(user_id)? {
-            bincode::deserialize(&value).map_err(|e| format!("Deserialization error: {e}"))?
-        } else {
-            Vec::new()
+        let mut projects: Vec<Project> = match self.users.get(user_id)? {
+            Some(value) => {
+                // Try to deserialize, fallback to empty vec if corrupted
+                serde_json::from_slice(&value).unwrap_or_else(|_| Vec::new())
+            }
+            None => Vec::new(),
         };
 
         // Avoid duplicates by checking project.id
@@ -156,8 +168,8 @@ impl Sled {
             projects.push(project);
         }
 
-        let encoded =
-            bincode::serialize(&projects).map_err(|e| format!("Serialization error: {e}"))?;
+        let encoded = serde_json::to_vec(&projects)
+            .map_err(|e| format!("Failed to serialize projects: {}", e))?;
         self.users.insert(user_id, encoded)?;
 
         Ok(())
@@ -168,10 +180,12 @@ impl Sled {
         const KEY: &str = "HANNAH";
 
         // Fetch existing entries (or start with an empty vector)
-        let mut entries: Vec<Metadata> = if let Some(bytes) = self.metadata.get(KEY)? {
-            bincode::deserialize(&bytes).unwrap_or_default()
-        } else {
-            vec![]
+        let mut entries: Vec<Metadata> = match self.metadata.get(KEY)? {
+            Some(bytes) => {
+                // Try to deserialize, fallback to empty vec if corrupted
+                serde_json::from_slice(&bytes).unwrap_or_else(|_| Vec::new())
+            }
+            None => vec![],
         };
 
         // Check if an entry with the same addr already exists
@@ -183,7 +197,7 @@ impl Sled {
         }
 
         // Serialize updated entries
-        let bytes = bincode::serialize(&entries)
+        let bytes = serde_json::to_vec(&entries)
             .map_err(|e| format!("Failed to serialize entries: {}", e))?;
 
         // Store and flush
@@ -197,12 +211,13 @@ impl Sled {
     pub fn get_metadata_entries(&self) -> StorageResult<Vec<Metadata>> {
         const KEY: &str = "HANNAH";
 
-        if let Some(bytes) = self.metadata.get(KEY)? {
-            let entries: Vec<Metadata> = bincode::deserialize(&bytes)
-                .map_err(|e| format!("Failed to deserialize entries: {}", e))?;
-            Ok(entries)
-        } else {
-            Ok(vec![])
+        match self.metadata.get(KEY)? {
+            Some(bytes) => {
+                let entries: Vec<Metadata> = serde_json::from_slice(&bytes)
+                    .unwrap_or_else(|_| Vec::new());
+                Ok(entries)
+            }
+            None => Ok(vec![]),
         }
     }
 }
@@ -217,7 +232,33 @@ impl DocumentStore for Sled {
 
     /// Insert a new document into a collection.
     /// Overwrites any existing document with the same ID.
-    async fn insert(&self, project_id: &str, collection: &str, doc: Document) -> StorageResult<()> {
+    async fn insert(
+        &self,
+        project_id: &str,
+        collection: &str,
+        mut doc: Document,
+        update: bool,
+    ) -> StorageResult<()> {
+        // Unix timestamp
+        let now = Utc::now().timestamp_millis() as u64;
+
+        // Document metadata
+        let metadata = if !update {
+            DocMetadata {
+                created_at: now,
+                updated_at: now,
+                version: None,
+                tags: Default::default(),
+            }
+        } else {
+            DocMetadata {
+                updated_at: now,
+                ..doc.metadata
+            }
+        };
+
+        doc.metadata = metadata;
+
         let key = <Sled as DocumentStore>::key(project_id, collection, &doc.id);
         let value = serde_json::to_vec(&doc)?;
         self.app.insert(key.as_bytes(), value)?;
@@ -252,7 +293,7 @@ impl DocumentStore for Sled {
     /// Update an existing document.
     /// (Internally just calls `insert`, since sled overwrites by key.)
     async fn update(&self, project_id: &str, collection: &str, doc: Document) -> StorageResult<()> {
-        self.insert(project_id, collection, doc).await
+        self.insert(project_id, collection, doc, true).await
     }
 
     /// Delete a document from a collection by ID.
@@ -300,12 +341,15 @@ impl DocumentStore for Sled {
         Ok(docs)
     }
 
-    /// List all collections for a project.
-    /// Scans keys and extracts the collection name from the namespace.
-    fn list_collections(&self, project_id: &str) -> StorageResult<Vec<String>> {
+    /// List all collections for a given project, including document count and
+    /// latest update timestamp.
+    ///
+    /// Scans keys with the prefix: `document::{project_id}::`
+    fn list_collections(&self, project_id: &str) -> StorageResult<Vec<CollectionSummary>> {
         let prefix = format!("document::{project_id}::");
         let mut collections = std::collections::HashSet::new();
 
+        // 🧩 1. Extract unique collection names
         for item in self.app.scan_prefix(prefix.as_bytes()) {
             let (k, _v): (IVec, IVec) = item?;
             let key_str = String::from_utf8(k.to_vec())?;
@@ -316,7 +360,38 @@ impl DocumentStore for Sled {
             }
         }
 
-        Ok(collections.into_iter().collect())
+        // 🧮 2. For each collection, compute stats (count + last_updated)
+        let mut summaries = Vec::new();
+
+        for collection in collections {
+            let (count, last_updated) = self.collection_stats(project_id, &collection)?;
+            summaries.push(CollectionSummary {
+                name: collection,
+                count,
+                last_updated,
+            });
+        }
+
+        Ok(summaries)
+    }
+
+    /// Helper to return stats for a single collection
+    fn collection_stats(&self, project_id: &str, collection: &str) -> StorageResult<(usize, u64)> {
+        let prefix = format!("document::{project_id}::{collection}::");
+        let mut count = 0usize;
+        let mut latest_update = 0u64;
+
+        for item in self.app.scan_prefix(prefix.as_bytes()) {
+            let (_k, v): (IVec, IVec) = item?;
+            let doc: Document = serde_json::from_slice(&v)?;
+
+            count += 1;
+            if doc.metadata.updated_at > latest_update {
+                latest_update = doc.metadata.updated_at;
+            }
+        }
+
+        Ok((count, latest_update))
     }
 
     /// Check if a collection exists for a project.
@@ -335,13 +410,14 @@ impl ProjectStore for Sled {
 
         // addr the API key to be used as project ID
         let encryption_key = env::var("TRIGGR_ENCRYPTION_KEY")?;
-        let addred_key = encrypt(&key, &encryption_key)?;
+        let crypt_key = encrypt(&key, &encryption_key)?;
 
         // Update encrypted key
-        project.api_key = addred_key.clone();
+        project.api_key = crypt_key.clone();
 
-        // Serialize the ApiKey for storage in sled
-        let bytes = bincode::serialize(&project).map_err(|e| e.to_string())?;
+        // Serialize the Project for storage in sled
+        let bytes = serde_json::to_vec(&project)
+            .map_err(|e| format!("Failed to serialize project: {}", e))?;
 
         // Store in the `projects` tree
         self.projects
@@ -356,9 +432,10 @@ impl ProjectStore for Sled {
 
     fn get(&self, key: &str) -> StorageResult<Option<Project>> {
         match self.projects.get(key.as_bytes()) {
-            // Found key → deserialize into ApiKey
+            // Found key → deserialize into Project
             Ok(Some(ivec)) => {
-                let project: Project = bincode::deserialize(&ivec).map_err(|e| e.to_string())?;
+                let project: Project = serde_json::from_slice(&ivec)
+                    .map_err(|e| format!("Failed to deserialize project: {}", e))?;
                 Ok(Some(project))
             }
             // Key not found
@@ -379,7 +456,8 @@ impl ProjectStore for Sled {
         };
 
         // Deserialize the project
-        let project: Project = bincode::deserialize(&bytes).map_err(|e| e.to_string())?;
+        let project: Project = serde_json::from_slice(&bytes)
+            .map_err(|e| format!("Failed to deserialize project: {}", e))?;
 
         // Verify ownership
         if project.owner != owner {
@@ -392,17 +470,20 @@ impl ProjectStore for Sled {
             .map_err(|e| e.to_string())?;
 
         // Load user projects
-        let mut projects: Vec<Project> = if let Some(value) = self.users.get(owner.as_bytes())? {
-            bincode::deserialize(&value).map_err(|e| format!("Deserialization error: {e}"))?
-        } else {
-            Vec::new()
+        let mut projects: Vec<Project> = match self.users.get(owner.as_bytes())? {
+            Some(value) => {
+                // Try to deserialize, fallback to empty vec if corrupted
+                serde_json::from_slice(&value).unwrap_or_else(|_| Vec::new())
+            }
+            None => Vec::new(),
         };
 
         // Filter out the deleted project
         projects.retain(|p| p.id != project.id);
 
         // Serialize and save the updated list
-        let serialized = bincode::serialize(&projects).map_err(|e| e.to_string())?;
+        let serialized = serde_json::to_vec(&projects)
+            .map_err(|e| format!("Failed to serialize user projects: {}", e))?;
         self.users.insert(owner.as_bytes(), serialized)?;
 
         Ok(())
@@ -410,12 +491,13 @@ impl ProjectStore for Sled {
 
     /// Get all projects of a user
     fn get_user_projects(&self, user_id: &str) -> StorageResult<Vec<Project>> {
-        if let Some(value) = self.users.get(user_id)? {
-            let projects: Vec<Project> =
-                bincode::deserialize(&value).map_err(|e| format!("Deserialization error: {e}"))?;
-            Ok(projects)
-        } else {
-            Ok(Vec::new())
+        match self.users.get(user_id)? {
+            Some(value) => {
+                let projects: Vec<Project> = serde_json::from_slice(&value)
+                    .unwrap_or_else(|_| Vec::new());
+                Ok(projects)
+            }
+            None => Ok(Vec::new()),
         }
     }
 }
@@ -424,23 +506,29 @@ impl TriggerStore for Sled {
     /// Store (append) a new trigger for a given contract.
     fn store_trigger(&self, contract_addr: &str, trigger: Trigger) -> StorageResult<()> {
         let key = contract_addr.as_bytes();
-
-        // Fetch existing triggers (if any)
-        let mut triggers: Vec<Trigger> = self
-            .triggers
-            .get(key)?
-            .map(|bytes| bincode::deserialize(&bytes).map_err(|e| StorageError::Other(e.to_string())))
-            .transpose()?
-            .unwrap_or_default();
-
-        // Insert only if the same id doesn’t already exist
-        if !triggers.iter().any(|t| t.id == trigger.id) {
+    
+        // Try to load existing triggers, fallback to empty vec on error
+        let mut triggers: Vec<Trigger> = match self.triggers.get(key)? {
+            Some(bytes) => match serde_json::from_slice(&bytes) {
+                Ok(list) => list,
+                Err(_) => {
+                    // corrupted data, start fresh
+                    vec![]
+                }
+            },
+            None => vec![],
+        };
+    
+        // Add or replace trigger with same ID
+        if let Some(existing) = triggers.iter_mut().find(|t| t.id == trigger.id) {
+            *existing = trigger;
+        } else {
             triggers.push(trigger);
         }
-
-        // Serialize and store back
-        let encoded = bincode::serialize(&triggers)
-            .map_err(|e| StorageError::Other(e.to_string()))?;
+    
+        // Serialize and store
+        let encoded = serde_json::to_vec(&triggers)
+            .map_err(|e| format!("Failed to serialize triggers: {}", e))?;
         self.triggers.insert(key, encoded)?;
         self.triggers.flush()?;
         Ok(())
@@ -450,40 +538,44 @@ impl TriggerStore for Sled {
     fn get_trigger(&self, contract_addr: &str, name: &str) -> StorageResult<Trigger> {
         let key = contract_addr.as_bytes();
 
-        let bytes = self
-            .triggers
-            .get(key)?
-            .ok_or_else(|| StorageError::NotFound(format!("No triggers found for contract {contract_addr}")))?;
+        let bytes = self.triggers.get(key)?.ok_or_else(|| {
+            StorageError::NotFound(format!("No triggers found for contract {contract_addr}"))
+        })?;
 
-        let triggers: Vec<Trigger> =
-            bincode::deserialize(&bytes).map_err(|e| StorageError::Other(e.to_string()))?;
+        let triggers: Vec<Trigger> = serde_json::from_slice(&bytes)
+            .map_err(|e| format!("Failed to deserialize triggers: {}", e))?;
 
-        triggers
-            .into_iter()
-            .find(|t| t.id == name)
-            .ok_or_else(|| StorageError::NotFound(format!("No trigger with id {name} for {contract_addr}")))
+        triggers.into_iter().find(|t| t.id == name).ok_or_else(|| {
+            StorageError::NotFound(format!("No trigger with id {name} for {contract_addr}"))
+        })
     }
 
     /// Update active/inactive state of a specific trigger.
-    fn set_trigger_state(&self, contract_addr: &str, trigger_id: &str, active: bool) -> StorageResult<()> {
+    fn set_trigger_state(
+        &self,
+        contract_addr: &str,
+        trigger_id: &str,
+        active: bool,
+    ) -> StorageResult<()> {
         let key = contract_addr.as_bytes();
 
-        let bytes = self
-            .triggers
-            .get(key)?
-            .ok_or_else(|| StorageError::NotFound(format!("No triggers found for contract {contract_addr}")))?;
+        let bytes = self.triggers.get(key)?.ok_or_else(|| {
+            StorageError::NotFound(format!("No triggers found for contract {contract_addr}"))
+        })?;
 
-        let mut triggers: Vec<Trigger> =
-            bincode::deserialize(&bytes).map_err(|e| StorageError::Other(e.to_string()))?;
+        let mut triggers: Vec<Trigger> = serde_json::from_slice(&bytes)
+            .map_err(|e| format!("Failed to deserialize triggers: {}", e))?;
 
         let Some(trigger) = triggers.iter_mut().find(|t| t.id == trigger_id) else {
-            return Err(StorageError::NotFound(format!("Trigger {trigger_id} not found")));
+            return Err(StorageError::NotFound(format!(
+                "Trigger {trigger_id} not found"
+            )));
         };
 
         trigger.active = active;
 
-        let encoded = bincode::serialize(&triggers)
-            .map_err(|e| StorageError::Other(e.to_string()))?;
+        let encoded = serde_json::to_vec(&triggers)
+            .map_err(|e| format!("Failed to serialize triggers: {}", e))?;
         self.triggers.insert(key, encoded)?;
         self.triggers.flush()?;
         Ok(())
@@ -493,13 +585,12 @@ impl TriggerStore for Sled {
     fn delete_trigger(&self, contract_addr: &str, trigger_id: &str) -> StorageResult<()> {
         let key = contract_addr.as_bytes();
 
-        let bytes = self
-            .triggers
-            .get(key)?
-            .ok_or_else(|| StorageError::NotFound(format!("No triggers found for contract {contract_addr}")))?;
+        let bytes = self.triggers.get(key)?.ok_or_else(|| {
+            StorageError::NotFound(format!("No triggers found for contract {contract_addr}"))
+        })?;
 
-        let mut triggers: Vec<Trigger> =
-            bincode::deserialize(&bytes).map_err(|e| StorageError::Other(e.to_string()))?;
+        let mut triggers: Vec<Trigger> = serde_json::from_slice(&bytes)
+            .map_err(|e| format!("Failed to deserialize triggers: {}", e))?;
 
         let len_before = triggers.len();
         triggers.retain(|t| t.id != trigger_id);
@@ -510,8 +601,8 @@ impl TriggerStore for Sled {
             )));
         }
 
-        let encoded = bincode::serialize(&triggers)
-            .map_err(|e| StorageError::Other(e.to_string()))?;
+        let encoded = serde_json::to_vec(&triggers)
+            .map_err(|e| format!("Failed to serialize triggers: {}", e))?;
         self.triggers.insert(key, encoded)?;
         self.triggers.flush()?;
         Ok(())
@@ -527,8 +618,8 @@ impl TriggerStore for Sled {
             )));
         };
 
-        let triggers: Vec<Trigger> =
-            bincode::deserialize(&bytes).map_err(|e| StorageError::Other(e.to_string()))?;
+        let triggers: Vec<Trigger> = serde_json::from_slice(&bytes)
+            .map_err(|e| StorageError::Other(e.to_string()))?;
 
         Ok(triggers)
     }
