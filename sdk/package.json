@@ -1,18 +1,37 @@
 {
   "name": "triggr-ts-sdk",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "1.0.11",
+  "description": "TypeScript SDK for interacting with Triggr — Realtime backend for all Web3",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "ts-node src/main.ts",
+    "release": "npm version patch && npm run build && npm publish",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
+  "keywords": [
+    "web3",
+    "sdk",
+    "realtime",
+    "firebase",
+    "triggr",
+    "blockchain",
+    "crosschain",
+    "events",
+    "polkadot"
+  ],
+  "author": "@algorealmInc",
+  "license": "https://github.com/algorealmInc/Triggr/blob/main/LICENCE.md",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/algorealmInc/Triggr.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "devDependencies": {
     "@types/axios": "^0.9.36",
     "@types/node": "^24.3.1",

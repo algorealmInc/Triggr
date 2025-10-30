@@ -6,7 +6,7 @@
 use super::*;
 use crate::{
     chain::polkadot::{prelude::CONTRACTS_NODE_URL, Polkadot},
-    server::routes,
+    server::routes, util::introduce_triggr,
 };
 use axum::{http::Method, routing::get, Extension, Router};
 use tokio::net::TcpListener;
@@ -50,6 +50,9 @@ pub async fn run() {
 
     let server_address = "0.0.0.0:5190";
     let listener = TcpListener::bind(server_address).await.unwrap();
+
+    // Introduce database
+    introduce_triggr();
 
     println!("🚀 Starting server at {}", server_address);
 

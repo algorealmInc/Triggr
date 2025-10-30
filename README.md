@@ -1,2 +1,3 @@
 # Triggr
-Reactive database for on-chain events.
+
+Triggr is an
