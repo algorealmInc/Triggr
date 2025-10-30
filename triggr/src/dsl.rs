@@ -740,7 +740,7 @@ impl DslExecutor {
     /// Execute a rule against event data
     pub fn execute_rule(rule: &Rule, event: &EventData) -> Option<Vec<Action>> {
         // Check if event name matches
-        if rule.event_name != event.event_name {
+        if rule.event_name.to_lowercase() != event.event_name.to_lowercase() {
             return None;
         }
         

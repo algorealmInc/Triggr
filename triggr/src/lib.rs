@@ -31,9 +31,9 @@ pub async fn handle_chain_events(triggr: Triggr, mut rx: Receiver<(String, Event
             // Filter triggers based on event name
             let triggers = triggers
                 .iter()
-                .filter(|t| t.rules.iter().any(|r| r.event_name == contract_addr))
+                .filter(|t| t.rules.iter().any(|r| r.event_name.to_lowercase() == event_data.event_name.to_lowercase()))
                 .cloned()
-                .collect::<Vec<Trigger>>();
+                .collect::<Vec<Trigger>>(); 
 
             // Spin up tasks to execute tiggers
             for trigger in triggers {
@@ -55,6 +55,7 @@ async fn execute_trigger(
     trigger: Trigger,
     event: EventData,
 ) {
+
     // Get actions to execute
     let actions = trigger
         .rules

@@ -128,42 +128,42 @@ where
         _state: &S,
     ) -> impl Future<Output = Result<Self, Self::Rejection>> {
         async {
-            let headers = &parts.headers;
-            let token = headers
-                .get(header::AUTHORIZATION)
-                .and_then(|h| h.to_str().ok())
-                .and_then(|h| h.strip_prefix("Bearer "))
-                .ok_or_else(|| AuthError("Missing Authorization header".into()))?;
+            // let headers = &parts.headers;
+            // let token = headers
+            //     .get(header::AUTHORIZATION)
+            //     .and_then(|h| h.to_str().ok())
+            //     .and_then(|h| h.strip_prefix("Bearer "))
+            //     .ok_or_else(|| AuthError("Missing Authorization header".into()))?;
 
-            // Decode header to get key ID (kid)
-            let header =
-                decode_header(token).map_err(|_| AuthError("Invalid JWT header".into()))?;
-            let kid = header
-                .kid
-                .ok_or(AuthError("Missing kid in JWT header".into()))?;
+            // // Decode header to get key ID (kid)
+            // let header =
+            //     decode_header(token).map_err(|_| AuthError("Invalid JWT header".into()))?;
+            // let kid = header
+            //     .kid
+            //     .ok_or(AuthError("Missing kid in JWT header".into()))?;
 
-            // Match JWK by kid
-            let jwk = extract_matching_jwk(&kid)
-                .map_err(|e| AuthError(format!("Failed to extract JWK: {}", e)))?
-                .ok_or(AuthError("No matching JWK found".into()))?;
+            // // Match JWK by kid
+            // let jwk = extract_matching_jwk(&kid)
+            //     .map_err(|e| AuthError(format!("Failed to extract JWK: {}", e)))?
+            //     .ok_or(AuthError("No matching JWK found".into()))?;
 
-            // Decode token
-            let decoding_key = DecodingKey::from_rsa_components(&jwk.n, &jwk.e)
-                .map_err(|_| AuthError("Invalid RSA key components".into()))?;
-            let validation = Validation::new(Algorithm::RS256);
+            // // Decode token
+            // let decoding_key = DecodingKey::from_rsa_components(&jwk.n, &jwk.e)
+            //     .map_err(|_| AuthError("Invalid RSA key components".into()))?;
+            // let validation = Validation::new(Algorithm::RS256);
 
-            let decoded = decode::<ClerkClaims>(token, &decoding_key, &validation)
-                .map_err(|_| AuthError("Invalid or expired Clerk token".into()))?;
-
-            Ok(Auth {
-                claims: decoded.claims,
-            })
+            // let decoded = decode::<ClerkClaims>(token, &decoding_key, &validation)
+            //     .map_err(|_| AuthError("Invalid or expired Clerk token".into()))?;
 
             // Ok(Auth {
-            //     claims: ClerkClaims {
-            //         user_id: "jasonXX".to_string(),
-            //     },
+            //     claims: decoded.claims,
             // })
+
+            Ok(Auth {
+                claims: ClerkClaims {
+                    user_id: "jasonXX".to_string(),
+                },
+            })
         }
     }
 }

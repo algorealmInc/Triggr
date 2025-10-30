@@ -58,6 +58,8 @@ impl Polkadot {
                             Ok(event_details) => {
                                 let pallet_name = event_details.pallet_name();
 
+                                println!("[{}]", pallet_name);
+
                                 // Only process pallet Revive (contracts) events
                                 if pallet_name != "Revive" {
                                     continue;
@@ -82,7 +84,7 @@ impl Polkadot {
                                                     );
 
                                                     println!(
-                                                        "   📍 Contract Address: 0x{}",
+                                                        "   📍 Contract Address: {}",
                                                         addr_bytes
                                                     );
                                                     println!(
@@ -92,6 +94,7 @@ impl Polkadot {
 
                                                     // Only try to decode contracts we care about
                                                     let cache = triggr.cache.read().await;
+                                                    println!("{:#?} -> {}", cache.contract.keys(), addr_bytes);
                                                     if let Some(metadata) =
                                                         cache.contract.get(&addr_bytes)
                                                     {

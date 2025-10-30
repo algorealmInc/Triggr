@@ -58,7 +58,7 @@ pub async fn save_trigger(
 
             triggr
                 .store
-                .store_trigger(&data.contract_addr, trigger.clone())
+                .store_trigger(&data.contract_addr.to_lowercase(), trigger.clone())
                 .map_err(AppError::from)?;
 
             // Prepare SlimTrigger for response

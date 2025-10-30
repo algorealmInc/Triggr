@@ -334,7 +334,7 @@ pub trait ProjectStore: Send + Sync {
 }
 
 /// Struct that describes a trigger.
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Trigger {
     pub id: String,
     pub description: String,

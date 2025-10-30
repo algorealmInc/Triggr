@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSL Validator Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            height: calc(100vh - 200px);
+        }
+
+        .editor-panel, .output-panel {
+            padding: 30px;
+            overflow: auto;
+        }
+
+        .editor-panel {
+            border-right: 2px solid #e0e0e0;
+        }
+
+        .panel-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-title::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+        }
+
+        textarea {
+            width: 100%;
+            height: calc(100% - 100px);
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            resize: none;
+            line-height: 1.6;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .validate-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            flex: 1;
+        }
+
+        .validate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .clear-btn {
+            background: #f44336;
+            color: white;
+        }
+
+        .clear-btn:hover {
+            background: #d32f2f;
+        }
+
+        .example-btn {
+            background: #4caf50;
+            color: white;
+        }
+
+        .example-btn:hover {
+            background: #388e3c;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status.valid {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 2px solid #4caf50;
+        }
+
+        .status.invalid {
+            background: #ffebee;
+            color: #c62828;
+            border: 2px solid #f44336;
+        }
+
+        .status-icon {
+            font-size: 1.5em;
+        }
+
+        .section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .event-list, .rule-list {
+            list-style: none;
+        }
+
+        .event-item, .rule-item {
+            padding: 10px;
+            background: white;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .event-name {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .event-fields {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .rule-condition {
+            font-family: 'Courier New', monospace;
+            background: #f5f5f5;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 8px 0;
+            font-size: 0.9em;
+        }
+
+        .action {
+            padding: 8px 12px;
+            background: #e3f2fd;
+            border-left: 3px solid #2196f3;
+            margin: 5px 0;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .error-list, .warning-list {
+            list-style: none;
+        }
+
+        .error-item {
+            padding: 12px;
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        .warning-item {
+            padding: 12px;
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        .error-message, .warning-message {
+            font-weight: 600;
+        }
+
+        .line-number {
+            background: #666;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            margin-right: 8px;
+        }
+
+        @media (max-width: 968px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+
+            .editor-panel {
+                border-right: none;
+                border-bottom: 2px solid #e0e0e0;
+            }
+
+            textarea {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 DSL Validator</h1>
+            <p>Test your Event-Driven DSL in real-time</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Editor Panel -->
+            <div class="editor-panel">
+                <div class="panel-title">📝 DSL Editor</div>
+                <textarea id="dslInput" placeholder="Write your DSL code here...">const events = [
+    transferred { amount },
+    moneyWithdrawn { amount, recipient },
+    loanGiven { amount }
+]
+
+fn main(events) {
+    if (events.transferred.amount > 200000) {
+        insert @audit_logs:log_001 with { event: "large_transfer", flagged: true }
+        update @transactions:tx_123 with { status: "flagged", reviewed: false }
+        notify "Large transfer detected"
+    } else {
+        delete @pending:tx_123
+    }
+}</textarea>
+
+                <div class="button-group">
+                    <button class="validate-btn" onclick="validateDSL()">✓ Validate DSL</button>
+                    <button class="example-btn" onclick="loadExample()">📄 Load Example</button>
+                    <button class="clear-btn" onclick="clearEditor()">✕ Clear</button>
+                </div>
+            </div>
+
+            <!-- Output Panel -->
+            <div class="output-panel">
+                <div class="panel-title">📊 Validation Results</div>
+                <div id="output">
+                    <p style="color: #999; text-align: center; padding: 50px;">
+                        Write your DSL and click "Validate DSL" to see results...
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DSL Validator Class (embedded)
+        class DSLValidator {
+            constructor() {
+                this.errors = [];
+                this.warnings = [];
+            }
+
+            validate(dslCode) {
+                this.errors = [];
+                this.warnings = [];
+
+                try {
+                    if (!dslCode || dslCode.trim().length === 0) {
+                        this.errors.push({ line: 0, message: "DSL code cannot be empty" });
+                        return this.getResult(false);
+                    }
+
+                    const events = this.parseEvents(dslCode);
+                    if (events === null) {
+                        return this.getResult(false);
+                    }
+
+                    const rules = this.parseMainFunction(dslCode, events);
+                    if (rules === null) {
+                        return this.getResult(false);
+                    }
+
+                    this.validateRules(rules, events);
+
+                    return this.getResult(this.errors.length === 0, events, rules);
+                } catch (error) {
+                    this.errors.push({ line: 0, message: `Unexpected error: ${error.message}` });
+                    return this.getResult(false);
+                }
+            }
+
+            parseEvents(code) {
+                const eventsMatch = code.match(/const\s+events\s*=\s*\[([^\]]+)\]/s);
+                
+                if (!eventsMatch) {
+                    this.errors.push({ line: 1, message: "Missing 'const events = [...]' definition" });
+                    return null;
+                }
+
+                const eventsContent = eventsMatch[1];
+                const events = [];
+                const lines = eventsContent.split('\n');
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    
+                    if (!line || line.startsWith('//')) continue;
+                    
+                    const cleanLine = line.replace(/[,.]$/, '').trim();
+                    const eventMatch = cleanLine.match(/^(\w+)\s*\{\s*([^}]*)\s*\}$/);
+                    
+                    if (eventMatch) {
+                        const eventName = eventMatch[1];
+                        const fieldsStr = eventMatch[2].trim();
+                        const fields = fieldsStr
+                            .split(',')
+                            .map(f => f.trim())
+                            .filter(f => f.length > 0);
+
+                        if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(eventName)) {
+                            this.errors.push({
+                                line: i + 1,
+                                message: `Invalid event name: '${eventName}'`
+                            });
+                            continue;
+                        }
+
+                        for (const field of fields) {
+                            if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(field)) {
+                                this.errors.push({
+                                    line: i + 1,
+                                    message: `Invalid field name: '${field}' in event '${eventName}'`
+                                });
+                            }
+                        }
+
+                        events.push({ name: eventName, fields });
+                    } else if (cleanLine.length > 0) {
+                        this.errors.push({
+                            line: i + 1,
+                            message: `Invalid event syntax: '${line}'`
+                        });
+                    }
+                }
+
+                if (events.length === 0) {
+                    this.errors.push({ line: 1, message: "No events defined" });
+                    return null;
+                }
+
+                return events;
+            }
+
+            parseMainFunction(code, events) {
+                const fnMatch = code.match(/fn\s+main\s*\(\s*events\s*\)\s*\{([\s\S]*)\}/);
+                
+                if (!fnMatch) {
+                    this.errors.push({
+                        line: 0,
+                        message: "Missing 'fn main(events) { ... }' function"
+                    });
+                    return null;
+                }
+
+                const functionBody = fnMatch[1];
+                
+                if (!functionBody.includes('if')) {
+                    this.warnings.push({
+                        line: 0,
+                        message: "Function has no conditional logic"
+                    });
+                }
+
+                const rules = this.parseIfElse(functionBody, events);
+                
+                return rules;
+            }
+
+            parseIfElse(body, events) {
+                const rules = [];
+                
+                // Find if statement
+                const ifPos = body.indexOf('if');
+                if (ifPos === -1) {
+                    const actions = this.parseActions(body);
+                    if (actions.length > 0) {
+                        rules.push({ condition: null, actions });
+                    }
+                    return rules;
+                }
+
+                // Extract condition between 'if (' and ')'
+                const conditionStart = body.indexOf('(', ifPos);
+                const conditionEnd = body.indexOf(')', conditionStart);
+                const condition = body.substring(conditionStart + 1, conditionEnd).trim();
+
+                // Find matching braces for if block
+                const ifBlockStart = body.indexOf('{', conditionEnd);
+                const ifBlockEnd = this.findMatchingBrace(body, ifBlockStart);
+                const ifBlock = body.substring(ifBlockStart + 1, ifBlockEnd);
+
+                // Validate condition
+                const conditionValid = this.validateCondition(condition, events);
+                
+                if (conditionValid) {
+                    const ifActions = this.parseActions(ifBlock);
+                    rules.push({ condition, actions: ifActions });
+                }
+
+                // Check for else block
+                const afterIf = body.substring(ifBlockEnd + 1).trim();
+                if (afterIf.startsWith('else')) {
+                    const elseBlockStart = afterIf.indexOf('{');
+                    const elseBlockEnd = this.findMatchingBrace(afterIf, elseBlockStart);
+                    const elseBlock = afterIf.substring(elseBlockStart + 1, elseBlockEnd);
+                    
+                    const elseActions = this.parseActions(elseBlock);
+                    rules.push({ condition: `!(${condition})`, actions: elseActions });
+                }
+
+                return rules;
+            }
+
+            findMatchingBrace(str, start) {
+                let depth = 0;
+                for (let i = start; i < str.length; i++) {
+                    if (str[i] === '{') depth++;
+                    if (str[i] === '}') {
+                        depth--;
+                        if (depth === 0) return i;
+                    }
+                }
+                return str.length;
+            }
+
+            validateCondition(condition, events) {
+                const condMatch = condition.match(/events\.(\w+)\.(\w+)\s*([><=!]+)\s*(.+)/);
+                
+                if (!condMatch) {
+                    this.errors.push({
+                        line: 0,
+                        message: `Invalid condition syntax: '${condition}'`
+                    });
+                    return false;
+                }
+
+                const [, eventName, field, operator, value] = condMatch;
+
+                const event = events.find(e => e.name === eventName);
+                if (!event) {
+                    this.errors.push({
+                        line: 0,
+                        message: `Unknown event '${eventName}' in condition`
+                    });
+                    return false;
+                }
+
+                if (!event.fields.includes(field)) {
+                    this.errors.push({
+                        line: 0,
+                        message: `Unknown field '${field}' in event '${eventName}'`
+                    });
+                    return false;
+                }
+
+                const validOps = ['>', '<', '>=', '<=', '==', '!='];
+                if (!validOps.includes(operator)) {
+                    this.errors.push({
+                        line: 0,
+                        message: `Invalid operator '${operator}'`
+                    });
+                    return false;
+                }
+
+                return true;
+            }
+
+            parseActions(block) {
+                const actions = [];
+                const lines = block.split('\n');
+
+                for (let line of lines) {
+                    line = line.trim();
+                    if (!line || line.startsWith('//')) continue;
+
+                    if (line.startsWith('update ')) {
+                        const action = this.parseUpdateAction(line);
+                        if (action) actions.push(action);
+                    }
+                    else if (line.startsWith('delete ')) {
+                        const action = this.parseDeleteAction(line);
+                        if (action) actions.push(action);
+                    }
+                    else if (line.startsWith('insert ')) {
+                        const action = this.parseInsertAction(line);
+                        if (action) actions.push(action);
+                    }
+                    else if (line.startsWith('notify ')) {
+                        const action = this.parseNotifyAction(line);
+                        if (action) actions.push(action);
+                    }
+                }
+
+                return actions;
+            }
+
+            parseUpdateAction(line) {
+                line = line.replace(/\$\{/g, '{');
+                const match = line.match(/update\s+@([\w:]+)\s+with\s+\{([^}]+)\}/);
+                
+                if (!match) {
+                    this.errors.push({
+                        line: 0,
+                        message: `Invalid update syntax: '${line}'`
+                    });
+                    return null;
+                }
+
+                const [, target, fieldsStr] = match;
+                const fields = this.parseFields(fieldsStr);
+                
+                return { type: 'update', target, fields };
+            }
+
+            parseDeleteAction(line) {
+                const match = line.match(/delete\s+@([\w:]+)/);
+                
+                if (!match) {
+                    this.errors.push({
+                        line: 0,
+                        message: `Invalid delete syntax: '${line}'`
+                    });
+                    return null;
+                }
+
+                return { type: 'delete', target: match[1] };
+            }
+
+            parseInsertAction(line) {
+                line = line.replace(/\$\{/g, '{');
+                const match = line.match(/insert\s+@([\w:]+)\s+with\s+\{([^}]+)\}/);
+                
+                if (!match) {
+                    this.errors.push({
+                        line: 0,
+                        message: `Invalid insert syntax: '${line}'`
+                    });
+                    return null;
+                }
+
+                const [, target, fieldsStr] = match;
+                const fields = this.parseFields(fieldsStr);
+                
+                return { type: 'insert', target, fields };
+            }
+
+            parseNotifyAction(line) {
+                const match = line.match(/notify\s+["']([^"']+)["']/);
+                
+                if (!match) {
+                    this.errors.push({
+                        line: 0,
+                        message: `Invalid notify syntax: '${line}'`
+                    });
+                    return null;
+                }
+
+                return { type: 'notify', message: match[1] };
+            }
+
+            parseFields(fieldsStr) {
+                const fields = {};
+                
+                if (fieldsStr.trim() === 'k:v, k:v ...' || fieldsStr.trim() === '...') {
+                    return fields;
+                }
+
+                const pairs = fieldsStr.split(',');
+                
+                for (const pair of pairs) {
+                    const trimmed = pair.trim();
+                    if (!trimmed || trimmed === '...') continue;
+                    
+                    const colonIdx = trimmed.indexOf(':');
+                    if (colonIdx === -1) continue;
+
+                    const key = trimmed.substring(0, colonIdx).trim();
+                    const value = trimmed.substring(colonIdx + 1).trim();
+                    
+                    fields[key] = value;
+                }
+
+                return fields;
+            }
+
+            validateRules(rules, events) {
+                if (rules.length === 0) {
+                    this.warnings.push({
+                        line: 0,
+                        message: "No rules defined in main function"
+                    });
+                }
+            }
+
+            getResult(valid, events = [], rules = []) {
+                return {
+                    valid,
+                    errors: this.errors,
+                    warnings: this.warnings,
+                    events,
+                    rules
+                };
+            }
+        }
+
+        // UI Functions
+        const validator = new DSLValidator();
+
+        function validateDSL() {
+            const input = document.getElementById('dslInput').value;
+            const result = validator.validate(input);
+            displayResult(result);
+        }
+
+        function displayResult(result) {
+            const output = document.getElementById('output');
+            
+            let html = '';
+
+            // Status
+            html += `<div class="status ${result.valid ? 'valid' : 'invalid'}">
+                <span class="status-icon">${result.valid ? '✓' : '✗'}</span>
+                <span>${result.valid ? 'DSL is valid!' : 'DSL has errors'}</span>
+            </div>`;
+
+            // Events
+            if (result.events.length > 0) {
+                html += `<div class="section">
+                    <h3>📋 Events (${result.events.length})</h3>
+                    <ul class="event-list">`;
+                
+                result.events.forEach(event => {
+                    html += `<li class="event-item">
+                        <div class="event-name">${event.name}</div>
+                        <div class="event-fields">Fields: ${event.fields.join(', ')}</div>
+                    </li>`;
+                });
+                
+                html += `</ul></div>`;
+            }
+
+            // Rules
+            if (result.rules.length > 0) {
+                html += `<div class="section">
+                    <h3>⚡ Rules (${result.rules.length})</h3>
+                    <ul class="rule-list">`;
+                
+                result.rules.forEach((rule, i) => {
+                    html += `<li class="rule-item">
+                        <strong>Rule ${i + 1}</strong>
+                        <div class="rule-condition">Condition: ${rule.condition || 'always'}</div>
+                        <div><strong>Actions (${rule.actions.length}):</strong></div>`;
+                    
+                    rule.actions.forEach(action => {
+                        let actionText = '';
+                        switch(action.type) {
+                            case 'update':
+                                actionText = `UPDATE @${action.target}`;
+                                break;
+                            case 'delete':
+                                actionText = `DELETE @${action.target}`;
+                                break;
+                            case 'insert':
+                                actionText = `INSERT @${action.target}`;
+                                break;
+                            case 'notify':
+                                actionText = `NOTIFY: "${action.message}"`;
+                                break;
+                        }
+                        html += `<div class="action">${actionText}</div>`;
+                    });
+                    
+                    html += `</li>`;
+                });
+                
+                html += `</ul></div>`;
+            }
+
+            // Errors
+            if (result.errors.length > 0) {
+                html += `<div class="section">
+                    <h3>❌ Errors (${result.errors.length})</h3>
+                    <ul class="error-list">`;
+                
+                result.errors.forEach(error => {
+                    html += `<li class="error-item">
+                        ${error.line > 0 ? `<span class="line-number">Line ${error.line}</span>` : ''}
+                        <span class="error-message">${error.message}</span>
+                    </li>`;
+                });
+                
+                html += `</ul></div>`;
+            }
+
+            // Warnings
+            if (result.warnings.length > 0) {
+                html += `<div class="section">
+                    <h3>⚠️ Warnings (${result.warnings.length})</h3>
+                    <ul class="warning-list">`;
+                
+                result.warnings.forEach(warning => {
+                    html += `<li class="warning-item">
+                        ${warning.line > 0 ? `<span class="line-number">Line ${warning.line}</span>` : ''}
+                        <span class="warning-message">${warning.message}</span>
+                    </li>`;
+                });
+                
+                html += `</ul></div>`;
+            }
+
+            output.innerHTML = html;
+        }
+
+        function loadExample() {
+            document.getElementById('dslInput').value = `const events = [
+    transferred { amount },
+    moneyWithdrawn { amount, recipient },
+    loanGiven { amount }
+]
+
+fn main(events) {
+    if (events.transferred.amount > 200000) {
+        insert @audit_logs:log_001 with { event: "large_transfer", flagged: true }
+        update @transactions:tx_123 with { status: "flagged", reviewed: false }
+        notify "Large transfer detected"
+    } else {
+        delete @pending:tx_123
+    }
+}`;
+            validateDSL();
+        }
+
+        function clearEditor() {
+            document.getElementById('dslInput').value = '';
+            document.getElementById('output').innerHTML = `
+                <p style="color: #999; text-align: center; padding: 50px;">
+                    Write your DSL and click "Validate DSL" to see results...
+                </p>
+            `;
+        }
+
+        // Auto-validate on input (debounced)
+        let timeout;
+        document.getElementById('dslInput').addEventListener('input', function() {
+            clearTimeout(timeout);
+            timeout = setTimeout(validateDSL, 1000);
+        });
+
+        // Initial validation
+        validateDSL();
+    </script>
+</body>
+</html>

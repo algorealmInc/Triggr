@@ -142,3 +142,11 @@ pub fn decrypt(encrypted_base64: &str, key_base64: &str) -> Result<String, Crypt
         .map_err(|_| CryptoError::DecryptionFailed)
 
 }
+
+/// Databse introduction
+pub fn introduce_triggr() {
+    println!("⚡️ Tiggr - The Backend For All web3");
+    println!("📄 Licence: https://github.com/algorealmInc/Triggr/blob/main/LICENCE.md");
+    println!("Copyright (c) 2025 Algorealm, Inc.");
+    println!();
+}

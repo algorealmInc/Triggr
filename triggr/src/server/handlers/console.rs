@@ -129,7 +129,7 @@ pub async fn create_project(
                     ));
                 }
 
-                contract_addr = Some(hash);
+                contract_addr = Some(hash.to_lowercase());
             }
             "contracts_json" => {
                 // Ensure we have contract_addr before processing file
