@@ -1,6 +1,6 @@
 # ⚡️ Triggr TypeScript SDK
 
-> Official TypeScript SDK for interacting with [Triggr](https://triggr.cloud) — the realtime, event-driven backend for Web3 developers.  
+> Official TypeScript SDK for interacting with [Triggr](https://triggr.cloud) — the realtime, event-driven backend for Web3 applications.  
 > Build apps that react to **on-chain events** and **sync data instantly** across clients, just like Firebase — but decentralized.
 
 ---

@@ -145,7 +145,7 @@ pub fn decrypt(encrypted_base64: &str, key_base64: &str) -> Result<String, Crypt
 
 /// Databse introduction
 pub fn introduce_triggr() {
-    println!("⚡️ Triggr - Realtime backend for Web3");
+    println!("⚡️ Triggr - Realtime, event-driven backend for Web3 applications");
     println!("📄 Licence: https://github.com/algorealmInc/Triggr/blob/main/LICENCE.md");
     println!("Copyright (c) 2025 Algorealm, Inc.");
     println!();

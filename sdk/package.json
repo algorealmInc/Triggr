@@ -1,6 +1,6 @@
 {
   "name": "triggr-ts-sdk",
-  "version": "1.0.9",
+  "version": "1.0.11",
   "description": "TypeScript SDK for interacting with Triggr — Realtime backend for all Web3",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
