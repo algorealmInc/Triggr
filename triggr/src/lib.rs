@@ -37,12 +37,15 @@ pub async fn handle_chain_events(triggr: Triggr, mut rx: Receiver<(String, Event
 
             // Spin up tasks to execute tiggers
             for trigger in triggers {
-                tokio::task::spawn(execute_trigger(
-                    triggr.clone(),
-                    contract_addr.clone(),
-                    trigger,
-                    event_data.clone(),
-                ));
+                // Make sure it hasn't been disabled
+                if trigger.active {
+                     tokio::task::spawn(execute_trigger(
+                        triggr.clone(),
+                        contract_addr.clone(),
+                        trigger,
+                        event_data.clone(),
+                    ));
+                }
             }
         }
     }
