@@ -128,7 +128,7 @@ where
         _state: &S,
     ) -> impl Future<Output = Result<Self, Self::Rejection>> {
         async {
-            let headers = &parts.headers;
+            // let headers = &parts.headers;
             let token = headers
                 .get(header::AUTHORIZATION)
                 .and_then(|h| h.to_str().ok())
