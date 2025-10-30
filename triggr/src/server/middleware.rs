@@ -1,5 +1,4 @@
 // Copyright (c) 2025, Algorealm Inc.
-
 // Middleware layer of the server
 
 use std::env;
@@ -128,7 +127,7 @@ where
         _state: &S,
     ) -> impl Future<Output = Result<Self, Self::Rejection>> {
         async {
-            // let headers = &parts.headers;
+            let headers = &parts.headers;
             let token = headers
                 .get(header::AUTHORIZATION)
                 .and_then(|h| h.to_str().ok())
