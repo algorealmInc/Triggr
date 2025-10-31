@@ -28,6 +28,7 @@ const MAX_FILE_SIZE: usize = 10 * 1024 * 1024; // 10MB
 pub struct CreateProjectResponse {
     pub message: String,
     pub project: Project,
+    pub secret: ApiKey
 }
 
 /// Request schema for Swagger (multipart form)
@@ -223,7 +224,7 @@ pub async fn create_project(
     // Construct project
     let mut project = Project {
         id: project_name.clone(),
-        api_key: String::with_capacity(32),
+        api_key: String::with_capacity(88),
         owner: auth.claims.user_id.clone(),
         description: description.clone(),
         contract_address: contract_addr,
@@ -232,7 +233,7 @@ pub async fn create_project(
     };
 
     // Save to database
-    match triggr.store.create(&mut project) {
+    let secret = match triggr.store.create(&mut project) {
         Ok(key) => key,
         Err(e) => {
             // Clean up uploaded file on database error
@@ -252,6 +253,7 @@ pub async fn create_project(
     let response = CreateProjectResponse {
         message: "Project created successfully".to_string(),
         project,
+        secret
     };
 
     Ok((StatusCode::CREATED, Json(response)))

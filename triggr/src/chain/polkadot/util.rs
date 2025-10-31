@@ -394,8 +394,6 @@ pub async fn decode_contract_event_with_metadata(
                 fields: event_args,
             };
 
-            println!("{:#?}", event_data);
-
             // Push into stream
             let _ = tx.send((contract_addr, event_data)).await;
 
