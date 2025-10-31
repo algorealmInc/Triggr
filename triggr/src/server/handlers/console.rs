@@ -249,6 +249,8 @@ pub async fn create_project(
         }
     };
 
+    println!("---> {}", secret);
+
     // Return success response
     let response = CreateProjectResponse {
         message: "Project created successfully".to_string(),
