@@ -321,7 +321,7 @@ pub struct Project {
 /// or even a database like Postgres in the future.
 pub trait ProjectStore: Send + Sync {
     /// Create a new project
-    fn create(&self, project: &mut Project) -> StorageResult<()>;
+    fn create(&self, project: &mut Project) -> StorageResult<ApiKey>;
 
     /// Fetch a project by its API key.
     fn get(&self, api_key: &str) -> StorageResult<Option<Project>>;

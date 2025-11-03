@@ -404,7 +404,7 @@ impl DocumentStore for Sled {
 
 // Implement ProjectStore for Sled
 impl ProjectStore for Sled {
-    fn create(&self, project: &mut Project) -> StorageResult<()> {
+    fn create(&self, project: &mut Project) -> StorageResult<ApiKey> {
         // Generate a random 32-character alphanumeric key.
         let key = util::generate_nonce::<32>();
 
@@ -427,7 +427,7 @@ impl ProjectStore for Sled {
         // Store the new project in relation to a user.
         self.add_user_project(&project.owner.clone(), project.clone())?;
 
-        Ok(())
+        Ok(key)
     }
 
     fn get(&self, key: &str) -> StorageResult<Option<Project>> {

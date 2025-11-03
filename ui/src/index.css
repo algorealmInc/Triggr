@@ -1,0 +1,204 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Triggr Console Design System - Modern dev platform with web3 aesthetics */
+
+@layer base {
+  :root {
+    /* Light Mode - Vercel-style minimal white + blue */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+    
+    /* Polkadot pink primary */
+    --primary: 330 81% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 330 81% 70%;
+    
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 9%;
+    
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+    
+    --accent: 330 81% 60%;
+    --accent-foreground: 0 0% 100%;
+    
+    /* Polkadot pink accent */
+    --polkadot: 330 81% 60%;
+    --polkadot-foreground: 0 0% 100%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 330 81% 60%;
+    
+    --radius: 0.5rem;
+    
+    /* Console-specific colors */
+    --console-bg: 0 0% 98%;
+    --console-border: 0 0% 90%;
+    --success: 142 76% 36%;
+    --warning: 38 92% 50%;
+    --info: 330 81% 60%;
+    
+    /* Gradients - Polkadot pink themed */
+    --gradient-primary: linear-gradient(135deg, hsl(330 81% 60%), hsl(330 81% 70%));
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
+    --gradient-hero: linear-gradient(135deg, hsl(330 81% 60% / 0.1), hsl(330 81% 70% / 0.1));
+    --gradient-mesh: radial-gradient(at 40% 20%, hsl(330 81% 60% / 0.15) 0px, transparent 50%), radial-gradient(at 80% 0%, hsl(330 81% 70% / 0.15) 0px, transparent 50%), radial-gradient(at 0% 50%, hsl(330 81% 65% / 0.1) 0px, transparent 50%);
+    
+    /* Shadows - enhanced depth */
+    --shadow-glow: 0 0 60px hsl(var(--primary) / 0.3), 0 0 120px hsl(var(--polkadot) / 0.15);
+    --shadow-elevated: 0 20px 40px -12px hsl(0 0% 0% / 0.12), 0 8px 16px -8px hsl(0 0% 0% / 0.08);
+    --shadow-card: 0 4px 16px -2px hsl(0 0% 0% / 0.08);
+    --shadow-card-hover: 0 12px 32px -4px hsl(var(--primary) / 0.2), 0 4px 16px -2px hsl(0 0% 0% / 0.1);
+    
+    /* Animations */
+    --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  .dark {
+    /* Dark Mode - Vercel-style minimal black + blue */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 98%;
+    
+    --card: 0 0% 4%;
+    --card-foreground: 0 0% 98%;
+    
+    --popover: 0 0% 4%;
+    --popover-foreground: 0 0% 98%;
+    
+    --primary: 330 81% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 330 81% 70%;
+    
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 98%;
+    
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 60%;
+    
+    --accent: 330 81% 60%;
+    --accent-foreground: 0 0% 100%;
+    
+    --polkadot: 330 81% 60%;
+    --polkadot-foreground: 0 0% 100%;
+    
+    --destructive: 0 63% 50%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 330 81% 60%;
+    
+    --console-bg: 0 0% 8%;
+    --console-border: 0 0% 15%;
+    --success: 142 76% 36%;
+    --warning: 38 92% 50%;
+    --info: 330 81% 60%;
+    
+    /* Dark mode gradients - Polkadot pink themed */
+    --gradient-primary: linear-gradient(135deg, hsl(330 81% 60%), hsl(330 81% 70%));
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
+    --gradient-hero: linear-gradient(135deg, hsl(330 81% 60% / 0.15), hsl(330 81% 70% / 0.15));
+    --gradient-mesh: radial-gradient(at 40% 20%, hsl(330 81% 60% / 0.2) 0px, transparent 50%), radial-gradient(at 80% 0%, hsl(330 81% 70% / 0.2) 0px, transparent 50%), radial-gradient(at 0% 50%, hsl(330 81% 65% / 0.15) 0px, transparent 50%);
+    
+    --shadow-glow: 0 0 80px hsl(var(--primary) / 0.4), 0 0 160px hsl(var(--polkadot) / 0.2);
+    --shadow-elevated: 0 20px 40px -12px hsl(0 0% 100% / 0.08), 0 8px 16px -8px hsl(0 0% 100% / 0.05);
+    --shadow-card: 0 4px 16px -2px hsl(0 0% 100% / 0.05);
+    --shadow-card-hover: 0 12px 32px -4px hsl(var(--primary) / 0.3), 0 4px 16px -2px hsl(0 0% 100% / 0.08);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Smooth animations and transitions */
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+  
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+  
+  .hover-lift {
+    @apply transition-all duration-300 hover:scale-105 hover:shadow-elevated;
+  }
+  
+  .glow-effect {
+    @apply shadow-glow;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Custom scrollbar for console areas */
+.console-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.console-scroll::-webkit-scrollbar-track {
+  @apply bg-muted;
+}
+
+.console-scroll::-webkit-scrollbar-thumb {
+  @apply bg-primary/30 rounded-full;
+}
+
+.console-scroll::-webkit-scrollbar-thumb:hover {
+  @apply bg-primary/50;
+}

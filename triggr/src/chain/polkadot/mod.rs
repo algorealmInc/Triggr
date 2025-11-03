@@ -12,6 +12,7 @@ pub mod prelude;
 pub mod util;
 
 use prelude::*;
+use tracing::info;
 
 use crate::{chain::polkadot::util::*, prelude::Triggr};
 
@@ -22,7 +23,7 @@ pub struct Polkadot;
 impl Polkadot {
     /// Connect to a contracts node and listen for event changes
     pub async fn connect(address: &str) -> Api<DefaultRuntimeConfig, JsonrpseeClient> {
-        println!("Connecting to {}", address);
+        info!("Connecting to {}", address);
 
         // Connect to node
         let client = JsonrpseeClient::new(address)
@@ -50,7 +51,7 @@ impl Polkadot {
         while let Some(events_result) = sub.next_events_from_metadata().await {
             match events_result {
                 Ok(events) => {
-                    println!("📦 Block: #{:?}", events.block_hash());
+                    info!("📦 Block: #{:?}", events.block_hash());
 
                     // Iterate through decoded events
                     for event in events.iter() {
@@ -58,7 +59,7 @@ impl Polkadot {
                             Ok(event_details) => {
                                 let pallet_name = event_details.pallet_name();
 
-                                println!("[{}]", pallet_name);
+                                info!("[{}]", pallet_name);
 
                                 // Only process pallet Revive (contracts) events
                                 if pallet_name != "Revive" {
@@ -83,18 +84,18 @@ impl Polkadot {
                                                         hex::encode(&contract_address)
                                                     );
 
-                                                    println!(
+                                                    info!(
                                                         "   📍 Contract Address: {}",
                                                         addr_bytes
                                                     );
-                                                    println!(
+                                                    info!(
                                                         "   📦 Event Data (hex): 0x{}",
                                                         hex::encode(&event_bytes)
                                                     );
 
                                                     // Only try to decode contracts we care about
                                                     let cache = triggr.cache.read().await;
-                                                    println!("{:#?} -> {}", cache.contract.keys(), addr_bytes);
+                                                    info!("{:#?} -> {}", cache.contract.keys(), addr_bytes);
                                                     if let Some(metadata) =
                                                         cache.contract.get(&addr_bytes)
                                                     {
@@ -112,18 +113,18 @@ impl Polkadot {
                                         }
                                     }
                                     Err(e) => {
-                                        eprintln!("   ❌ Could not decode fields: {:?}", e);
+                                        info!("   ❌ Could not decode fields: {:?}", e);
                                     }
                                 }
                             }
                             Err(e) => {
-                                eprintln!("❌ Could not decode event: {:?}", e);
+                                info!("❌ Could not decode event: {:?}", e);
                             }
                         }
                     }
                 }
                 Err(e) => {
-                    eprintln!("⚠️ Error while receiving events: {:?}", e);
+                    info!("⚠️ Error while receiving events: {:?}", e);
                 }
             }
         }
