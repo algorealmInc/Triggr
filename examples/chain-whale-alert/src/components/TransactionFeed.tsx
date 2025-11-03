@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import TransactionCard from "./TransactionCard";
 import { Activity } from "lucide-react";
-import Triggr from "triggr-ts-sdk"; 
+import { TriggrSDK } from "triggr-ts-sdk"; 
 
 interface Transaction {
   id: string;
@@ -20,7 +20,8 @@ const TransactionFeed = ({ threshold }: TransactionFeedProps) => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const client = new Triggr("R1hwSv7Eeg7vaTf_0t5cudPEYgqkf9-geXY8NuXs26A"); 
+    // Initialize a triggr client
+    const client = new TriggrSDK("R1hwSv7Eeg7vaTf_0t5cudPEYgqkf9-geXY8NuXs26A"); 
 
     client.connect();
 
@@ -71,7 +72,7 @@ const TransactionFeed = ({ threshold }: TransactionFeedProps) => {
 
       {transactions.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
-          <p>Waiting for transactions above {threshold} ETH...</p>
+          <p>Waiting for transactions above {threshold} PAS...</p>
         </div>
       ) : (
         <div className="space-y-3">

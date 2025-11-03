@@ -24,7 +24,7 @@ const ThresholdConfig = ({ onThresholdChange, currentThreshold }: ThresholdConfi
     <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-4 items-end">
       <div className="flex-1 w-full">
         <Label htmlFor="threshold" className="text-sm text-muted-foreground mb-2 block">
-          Alert Threshold (ETH)
+          Alert Threshold (PAS)
         </Label>
         <Input
           id="threshold"

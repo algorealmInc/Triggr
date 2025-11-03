@@ -1,6 +1,5 @@
 // Copyright (c) 2025, Algorealm Inc.
 
-import WebSocket from "ws";
 import axios, { AxiosInstance } from "axios";
 
 export type EventHandler<T = WsPayload> = (payload: T) => void;
@@ -46,11 +45,24 @@ interface TriggrSDKOptions {
     apiKey: string;
 }
 
+let WSImpl: any;
+
+(async function() {
+    if (typeof window !== "undefined") {
+        // Browser
+        WSImpl = WebSocket;
+    } else {
+        // Node
+        // Dynamic import so TS won’t complain in browser builds
+        WSImpl = (await import("ws")).default;
+    }
+})();
+
 export class TriggrSDK {
     private api: AxiosInstance;
     private ws?: WebSocket;
     private eventHandlers: Map<string, Set<EventHandler>> = new Map();
-    private readonly baseURL = "https://api.triggr.cloud";
+    private readonly baseURL = "https://triggr-production.up.railway.app";
 
     constructor(private options: TriggrSDKOptions) {
         // Configure REST API automatically
@@ -63,8 +75,14 @@ export class TriggrSDK {
     // Connect to the realtime WebSocket
     async connect(): Promise<void> {
         return new Promise((resolve, reject) => {
-            const wsUrl = "wss://api.triggr.cloud/ws";
-            this.ws = new WebSocket(wsUrl, {
+            const url = new URL(this.baseURL);
+            url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+            url.pathname = "/ws";
+            url.searchParams.set("api_key", this.options.apiKey);
+    
+            this.ws = new WebSocket(url.toString());
+
+            this.ws = new WSImpl(wsUrl, {
                 headers: { "x-api-key": this.options.apiKey },
             });
 
@@ -109,8 +127,8 @@ export class TriggrSDK {
             version: 0,
             tags: []
         };
-        
-        const res = await this.api.post(`/api/db/collections/${collection}/docs`, { id: data.id, data, metadata});
+
+        const res = await this.api.post(`/api/db/collections/${collection}/docs`, { id: data.id, data, metadata });
         return res.data;
     }
 
@@ -120,7 +138,7 @@ export class TriggrSDK {
             version: 0,
             tags: []
         };
-        
+
         await this.api.put(`/api/db/collections/${collection}/docs/${data.id}`, { id: data.id, data, metadata });
         this.emit(`document:${collection}:${data.id}:insert`, { collection, id: data.id, data });
     }

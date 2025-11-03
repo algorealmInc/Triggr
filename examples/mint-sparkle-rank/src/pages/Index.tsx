@@ -105,8 +105,8 @@ const Index = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-12">
           <StatsCard title="Total Mints" value="1,247" icon={Zap} trend="+12% today" />
           <StatsCard title="Active Minters" value="342" icon={Users} trend="+8 new" />
-          <StatsCard title="Total Volume" value="156 ETH" icon={Flame} trend="+23% today" />
-          <StatsCard title="Floor Price" value="0.5 ETH" icon={TrendingUp} trend="+5%" />
+          <StatsCard title="Total Volume" value="156 PAS" icon={Flame} trend="+23% today" />
+          <StatsCard title="Floor Price" value="0.5 PAS" icon={TrendingUp} trend="+5%" />
         </div>
 
         {/* Main Content */}

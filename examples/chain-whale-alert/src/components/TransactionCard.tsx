@@ -51,7 +51,7 @@ const TransactionCard = ({ transaction }: TransactionCardProps) => {
           <div className="text-2xl font-bold text-primary font-mono">
             {formatAmount(transaction.amount)}
           </div>
-          <div className="text-xs text-muted-foreground">ETH</div>
+          <div className="text-xs text-muted-foreground">PAS</div>
         </div>
       </div>
     </Card>

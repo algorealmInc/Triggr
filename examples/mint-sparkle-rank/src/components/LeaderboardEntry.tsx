@@ -46,7 +46,7 @@ const LeaderboardEntry = ({ rank, minter, mintCount, totalValue, trend }: Leader
         <div className="flex-1 min-w-0">
           <h4 className="font-bold text-foreground truncate">{minter}</h4>
           <p className="text-sm text-muted-foreground">
-            {mintCount} NFTs minted • {totalValue} ETH
+            {mintCount} NFTs minted • {totalValue} PAS
           </p>
         </div>
         <div className="flex items-center gap-2">
