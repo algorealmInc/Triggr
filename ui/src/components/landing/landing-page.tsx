@@ -1,8 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { HeroSection } from "./hero-section";
 import { Database } from "lucide-react";
+import { useEffect } from "react";
 
 export const LandingPage = () => {
+  useEffect(() => {
+    document.documentElement.classList.add("dark");
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
