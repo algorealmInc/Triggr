@@ -1,0 +1,229 @@
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes slideRight {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+/* Triggr Console Design System - Modern dev platform with web3 aesthetics */
+
+@layer base {
+  :root {
+    /* Light Mode - Vercel-style minimal white + blue */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+
+    /* Pink accent - #E6007A */
+    --primary: 328 100% 45%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 328 100% 55%;
+
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 9%;
+
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+
+    --accent: 328 100% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Polkadot pink accent */
+    --polkadot: 330 81% 60%;
+    --polkadot-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 328 100% 45%;
+
+    --radius: 0.5rem;
+
+    /* Console-specific colors */
+    --console-bg: 0 0% 98%;
+    --console-border: 0 0% 90%;
+    --success: 142 76% 36%;
+    --warning: 38 92% 50%;
+    --info: 328 100% 45%;
+
+    /* Gradients - subtle, Vercel-style */
+    --gradient-primary: linear-gradient(
+      135deg,
+      hsl(var(--primary)),
+      hsl(var(--primary-glow))
+    );
+    --gradient-subtle: linear-gradient(
+      180deg,
+      hsl(var(--background)),
+      hsl(var(--muted))
+    );
+    --gradient-blue: linear-gradient(
+      135deg,
+      hsl(328 100% 45%),
+      hsl(328 100% 55%)
+    );
+
+    /* Shadows - minimal */
+    --shadow-glow: 0 0 30px hsl(var(--primary) / 0.12);
+    --shadow-elevated: 0 8px 24px -8px hsl(0 0% 0% / 0.08);
+
+    /* Animations */
+    --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  .dark {
+    /* Dark Mode - Pure black like Vercel */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 98%;
+
+    --card: 0 0% 6%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 0 0% 6%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 328 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 328 100% 60%;
+
+    --secondary: 0 0% 8%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 0 0% 8%;
+    --muted-foreground: 0 0% 55%;
+
+    --accent: 328 100% 50%;
+    --accent-foreground: 0 0% 98%;
+
+    --polkadot: 330 81% 60%;
+    --polkadot-foreground: 0 0% 100%;
+
+    --destructive: 0 63% 50%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 12%;
+    --input: 0 0% 12%;
+    --ring: 328 100% 50%;
+
+    --console-bg: 0 0% 6%;
+    --console-border: 0 0% 12%;
+    --success: 142 76% 36%;
+    --warning: 38 92% 50%;
+    --info: 328 100% 50%;
+
+    /* No gradients - pure black background */
+    --gradient-primary: hsl(0 0% 0%);
+    --gradient-subtle: hsl(0 0% 0%);
+    --gradient-blue: hsl(0 0% 0%);
+
+    --shadow-glow: 0 0 0 transparent;
+    --shadow-elevated: 0 1px 3px hsl(0 0% 100% / 0.05);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Smooth animations and transitions */
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+
+  .hover-lift {
+    @apply transition-all duration-300 hover:scale-105 hover:shadow-elevated;
+  }
+
+  .glow-effect {
+    @apply shadow-glow;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Custom scrollbar for console areas */
+.console-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.console-scroll::-webkit-scrollbar-track {
+  @apply bg-muted;
+}
+
+.console-scroll::-webkit-scrollbar-thumb {
+  @apply bg-primary/30 rounded-full;
+}
+
+.console-scroll::-webkit-scrollbar-thumb:hover {
+  @apply bg-primary/50;
+}
+
+body {
+  font-family: "Instrument Sans", sans-serif;
+  font-optical-sizing: auto;
+  font-style: normal;
+  font-variation-settings: "wdth" 100;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
