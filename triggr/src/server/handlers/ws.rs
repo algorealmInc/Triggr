@@ -3,6 +3,7 @@
 // This module handles websockets request and responses.
 
 use super::*;
+use axum::extract::Query;
 use axum::extract::ws::Message;
 use axum::http::{HeaderMap, StatusCode};
 use axum::{
@@ -22,21 +23,33 @@ struct WsJson {
     data: String,
 }
 
+#[derive(Deserialize)]
+pub struct WsParams {
+    api_key: Option<String>,
+}
+
 // Handle websocket requests.
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
     headers: HeaderMap,
+    Query(params): Query<WsParams>,
     State(triggr): State<Triggr>,
 ) -> impl IntoResponse {
-    // Check for API key
-    match headers.get("x-api-key") {
-        Some(value) if value.to_str().is_ok() => {
-            match ProjectStore::get(&*triggr.store, value.to_str().unwrap()) {
-                Ok(_api_key) => ws.on_upgrade(move |socket| handle_socket(socket, triggr)),
-                Err(_) => StatusCode::UNAUTHORIZED.into_response(),
-            }
-        }
-        _ => StatusCode::UNAUTHORIZED.into_response(),
+    // Try to get API key from header
+    let header_key = headers
+        .get("x-api-key")
+        .and_then(|v| v.to_str().ok())
+        .map(String::from);
+
+    // Or from query parameters
+    let api_key = header_key.or(params.api_key);
+
+    match api_key {
+        Some(key) => match ProjectStore::get(&*triggr.store, &key) {
+            Ok(_) => ws.on_upgrade(move |socket| handle_socket(socket, triggr)),
+            Err(_) => StatusCode::UNAUTHORIZED.into_response(),
+        },
+        None => StatusCode::UNAUTHORIZED.into_response(),
     }
 }
 

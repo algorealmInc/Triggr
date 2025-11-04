@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import TransactionCard from "./TransactionCard";
 import { Activity } from "lucide-react";
-import { TriggrSDK } from "triggr-ts-sdk"; 
+import { TriggrSDK } from "triggr-ts-sdk";
 
 interface Transaction {
   id: string;
@@ -21,7 +21,9 @@ const TransactionFeed = ({ threshold }: TransactionFeedProps) => {
 
   useEffect(() => {
     // Initialize a triggr client
-    const client = new TriggrSDK("R1hwSv7Eeg7vaTf_0t5cudPEYgqkf9-geXY8NuXs26A"); 
+    const client = new TriggrSDK({
+      apiKey: "R1hwSv7Eeg7vaTf_0t5cudPEYgqkf9-geXY8NuXs26A",
+    });
 
     client.connect();
 
@@ -38,7 +40,11 @@ const TransactionFeed = ({ threshold }: TransactionFeedProps) => {
           setTransactions((prev) => {
             const updated = [tx, ...prev].slice(0, 20);
             // Sort newest first
-            return updated.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            return updated.sort(
+              (a, b) =>
+                new Date(b.timestamp).getTime() -
+                new Date(a.timestamp).getTime()
+            );
           });
         }
       });
@@ -66,7 +72,9 @@ const TransactionFeed = ({ threshold }: TransactionFeedProps) => {
               isConnected ? "bg-primary animate-pulse" : "bg-gray-400"
             }`}
           />
-          <span className="text-sm">{isConnected ? "Monitoring" : "Disconnected"}</span>
+          <span className="text-sm">
+            {isConnected ? "Monitoring" : "Disconnected"}
+          </span>
         </div>
       </div>
 
