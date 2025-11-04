@@ -17,13 +17,31 @@ export const LandingPage = () => {
             <Database className="w-6 h-6 text-primary" />
             <span className="text-xl font-bold">Triggr</span>
           </div>
-          
+
           <div className="flex items-center gap-6">
-            <a href="#docs" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <a
+              href="https://docs.trigger.cloud"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
               Docs
             </a>
-            <Button variant="ghost" size="sm">Sign In</Button>
-            <Button size="sm">Get Started</Button>
+            <a
+              href="https://console.triggr.cloud"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="ghost" size="sm">
+                Sign In
+              </Button>
+            </a>
+
+            <a
+              href="https://console.triggr.cloud/sign-up"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button size="sm">Get Started</Button>
+            </a>
           </div>
         </div>
       </nav>
