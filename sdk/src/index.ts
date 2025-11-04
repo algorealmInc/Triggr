@@ -45,24 +45,11 @@ interface TriggrSDKOptions {
     apiKey: string;
 }
 
-let WSImpl: any;
-
-(async function() {
-    if (typeof window !== "undefined") {
-        // Browser
-        WSImpl = WebSocket;
-    } else {
-        // Node
-        // Dynamic import so TS won’t complain in browser builds
-        WSImpl = (await import("ws")).default;
-    }
-})();
-
 export class TriggrSDK {
     private api: AxiosInstance;
-    private ws?: WebSocket;
+    private ws?: any;
     private eventHandlers: Map<string, Set<EventHandler>> = new Map();
-    private readonly baseURL = "https://triggr-production.up.railway.app";
+    private readonly baseURL = "https://api.triggr.cloud";
 
     constructor(private options: TriggrSDKOptions) {
         // Configure REST API automatically
@@ -74,45 +61,51 @@ export class TriggrSDK {
 
     // Connect to the realtime WebSocket
     async connect(): Promise<void> {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             const url = new URL(this.baseURL);
             url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
             url.pathname = "/ws";
             url.searchParams.set("api_key", this.options.apiKey);
-    
-            this.ws = new WebSocket(url.toString());
 
-            this.ws = new WSImpl(wsUrl, {
-                headers: { "x-api-key": this.options.apiKey },
-            });
+            // For browser
+            if (typeof window !== "undefined") {
+                // Browser: use query param
+                this.ws = new WebSocket(url.toString());
+            } else {
+                // Node.js
+                const { default: WSImpl } = await import("ws");
+                this.ws = new WSImpl(url.toString(), {
+                    headers: { "x-api-key": this.options.apiKey },
+                });
+            }
 
-            this.ws.on("open", () => {
+            this.ws.onopen = () => {
                 console.log("✅ WebSocket connected");
                 this.emit("connected", {});
                 resolve();
-            });
+            };
 
-            this.ws.on("close", () => {
+            this.ws.onclose = () => {
                 console.warn("⚠️ WebSocket disconnected");
                 this.emit("disconnected", {});
-            });
+            };
 
-            this.ws.on("error", (err: any) => {
+            this.ws.onerror = (err: any) => {
                 console.error("❌ WebSocket error:", err);
                 this.emit("error", err);
                 reject(err);
-            });
+            };
 
-            this.ws.on("message", (data: { toString: () => string }) => {
+            this.ws.onmessage = (event: { data: string; }) => {
                 try {
-                    const msg = JSON.parse(data.toString());
+                    const msg = JSON.parse(event.data);
                     if (msg.topic && msg.doc) {
                         this.emit(msg.topic, msg.doc);
                     }
                 } catch (e) {
                     console.error("Failed to parse WS message:", e);
                 }
-            });
+            };
         });
     }
 

@@ -39,18 +39,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TriggrSDK = void 0;
 const axios_1 = __importDefault(require("axios"));
-let WSImpl;
-(async function () {
-    if (typeof window !== "undefined") {
-        // Browser
-        WSImpl = WebSocket;
-    }
-    else {
-        // Node
-        // Dynamic import so TS won’t complain in browser builds
-        WSImpl = (await Promise.resolve().then(() => __importStar(require("ws")))).default;
-    }
-})();
 class TriggrSDK {
     options;
     api;
@@ -67,28 +55,40 @@ class TriggrSDK {
     }
     // Connect to the realtime WebSocket
     async connect() {
-        return new Promise((resolve, reject) => {
-            const wsUrl = "wss://api.triggr.cloud/ws";
-            this.ws = new WSImpl(wsUrl, {
-                headers: { "x-api-key": this.options.apiKey },
-            });
-            this.ws.on("open", () => {
+        return new Promise(async (resolve, reject) => {
+            const url = new URL(this.baseURL);
+            url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+            url.pathname = "/ws";
+            url.searchParams.set("api_key", this.options.apiKey);
+            // For browser
+            if (typeof window !== "undefined") {
+                // Browser: use query param
+                this.ws = new WebSocket(url.toString());
+            }
+            else {
+                // Node.js
+                const { default: WSImpl } = await Promise.resolve().then(() => __importStar(require("ws")));
+                this.ws = new WSImpl(url.toString(), {
+                    headers: { "x-api-key": this.options.apiKey },
+                });
+            }
+            this.ws.onopen = () => {
                 console.log("✅ WebSocket connected");
                 this.emit("connected", {});
                 resolve();
-            });
-            this.ws.on("close", () => {
+            };
+            this.ws.onclose = () => {
                 console.warn("⚠️ WebSocket disconnected");
                 this.emit("disconnected", {});
-            });
-            this.ws.on("error", (err) => {
+            };
+            this.ws.onerror = (err) => {
                 console.error("❌ WebSocket error:", err);
                 this.emit("error", err);
                 reject(err);
-            });
-            this.ws.on("message", (data) => {
+            };
+            this.ws.onmessage = (event) => {
                 try {
-                    const msg = JSON.parse(data.toString());
+                    const msg = JSON.parse(event.data);
                     if (msg.topic && msg.doc) {
                         this.emit(msg.topic, msg.doc);
                     }
@@ -96,7 +96,7 @@ class TriggrSDK {
                 catch (e) {
                     console.error("Failed to parse WS message:", e);
                 }
-            });
+            };
         });
     }
     disconnect() {
