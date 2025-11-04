@@ -3,11 +3,11 @@
 // This module handles websockets request and responses.
 
 use super::*;
-use axum::extract::Query;
 use axum::extract::ws::Message;
+use axum::extract::Query;
 use axum::http::{HeaderMap, StatusCode};
 use axum::{
-    extract::{State, WebSocketUpgrade, ws::WebSocket},
+    extract::{ws::WebSocket, State, WebSocketUpgrade},
     response::IntoResponse,
 };
 use futures::stream::StreamExt;
@@ -46,8 +46,10 @@ pub async fn ws_handler(
 
     match api_key {
         Some(key) => match ProjectStore::get(&*triggr.store, &key) {
-            Ok(_) => ws.on_upgrade(move |socket| handle_socket(socket, triggr)),
-            Err(_) => StatusCode::UNAUTHORIZED.into_response(),
+            Ok(project) if project.is_some() => {
+                ws.on_upgrade(move |socket| handle_socket(socket, triggr))
+            }
+            _ => StatusCode::UNAUTHORIZED.into_response(),
         },
         None => StatusCode::UNAUTHORIZED.into_response(),
     }

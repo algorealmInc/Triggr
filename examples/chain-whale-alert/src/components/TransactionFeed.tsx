@@ -22,7 +22,7 @@ const TransactionFeed = ({ threshold }: TransactionFeedProps) => {
   useEffect(() => {
     // Initialize a triggr client
     const client = new TriggrSDK({
-      apiKey: "R1hwSv7Eeg7vaTf_0t5cudPEYgqkf9-geXY8NuXs26A",
+      apiKey: "gEoaRYwVYkRWj1ry-PgQwwC4V9kjq4u8bWm9N0FEJHs",
     });
 
     client.connect();

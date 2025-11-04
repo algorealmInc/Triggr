@@ -64,7 +64,6 @@ pub fn trigger_routes() -> Router<Triggr> {
 pub fn ws_route() -> Router<Triggr> {
     Router::new()
         .route("/ws", get(ws::ws_handler))
-        .route_layer(mw::from_fn(midw::require_api_key))
 }
 
 /// Return swagger docs route.
