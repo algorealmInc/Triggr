@@ -38,7 +38,7 @@ export const HeroSection = () => {
           >
             <Zap className="w-4 h-4 text-primary" />
             <span className="text-sm font-medium text-foreground">
-              Real-time Blockchain Events
+            No polling, no waiting. Just pure, event-driven magic.
             </span>
           </motion.div>
 
@@ -49,9 +49,8 @@ export const HeroSection = () => {
             transition={{ duration: 0.8, delay: 0.3 }}
             className="text-5xl md:text-7xl font-bold tracking-tight text-foreground"
           >
-            When the chain moves,
-            <br />
-            <span className="text-primary">your app should too</span>
+            Build <span className="text-primary">Real-Time</span> Decentralized
+           Applications
           </motion.h1>
 
           {/* Subheading */}
@@ -61,10 +60,11 @@ export const HeroSection = () => {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="text-xl md:text-2xl text-muted-foreground max-w-2xl leading-relaxed"
           >
-            Triggr is a real-time database for Web3. It turns blockchain events into real-time experiences.
-            Power your next dApp with a backend that feels alive — reactive, reliable, and ready for scale.
-          </motion.p>
+            Triggr is a real-time database for Web3. It turns blockchain events
+            into real-time experiences. Power your next dApp with a backend that
+            feels alive — reactive, reliable, and ready for scale.
 
+          </motion.p>
           {/* CTA buttons */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
