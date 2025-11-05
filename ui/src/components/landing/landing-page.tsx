@@ -14,8 +14,11 @@ export const LandingPage = () => {
       <nav className="fixed top-0 w-full z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">
         <div className="container mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Database className="w-6 h-6 text-primary" />
-            <span className="text-xl font-bold">Triggr</span>
+            <img
+              src="assets/triggr-logo.png"
+              alt="Triggr Logo"
+              className="max-w-[200px] w-full h-auto object-contain"
+            ></img>
           </div>
 
           <div className="flex items-center gap-6">

@@ -60,7 +60,7 @@ export const HeroSection = () => {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="text-xl md:text-2xl text-muted-foreground max-w-2xl leading-relaxed"
           >
-            Triggr is a real-time database for Web3. It turns blockchain events
+            Triggr is a real-time database for Web3, turning blockchain events
             into real-time experiences. Power your next dApp with a backend that
             feels alive — reactive, reliable, and ready for scale.
 
