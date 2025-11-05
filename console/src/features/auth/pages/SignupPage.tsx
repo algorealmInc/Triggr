@@ -116,87 +116,22 @@ export default function SignupPage() {
       <header className="absolute top-6 left-6 z-20">
         <Logo size="sm" />
       </header>
-
       <div className="hidden lg:flex lg:w-1/2 p-8 xl:p-12 items-center bg-primary/5">
-        <div className="max-w-xl">
-          <div className="mb-8">
-            <div className="inline-block px-4 py-2 bg-primary/10 rounded-full mb-4">
-              <span className="text-sm font-semibold text-primary">
-                Web3 Developer Platform
-              </span>
-            </div>
-            <h1 className="text-4xl xl:text-5xl font-bold mb-4 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
-              Start building with Triggr Console
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Join developers building the future of web3 applications
-            </p>
+        <div className="max-w-xl text-center">
+          <div className="inline-block px-4 py-2 bg-primary/10 rounded-full mb-6">
+            <span className="text-sm font-semibold text-primary">
+              Web3 Developer Platform
+            </span>
           </div>
 
-          <div className="space-y-6">
-            <div className="flex gap-3">
-              <div className="mt-1">
-                <Check className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">
-                  Try it free for 30 days with $200 in trial credits
-                </h3>
-              </div>
-            </div>
+          <h1 className="text-4xl xl:text-5xl font-bold mb-6 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
+            Build Web3 Apps Faster with Triggr
+          </h1>
 
-            <div className="flex gap-3">
-              <div className="mt-1">
-                <Check className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Start building instantly</h3>
-                <p className="text-sm text-muted-foreground">
-                  Deploy Triggr smart contracts effortlessly and start building
-                  web3 applications in minutes.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <div className="mt-1">
-                <Check className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Scale cost-efficiently</h3>
-                <p className="text-sm text-muted-foreground">
-                  Handle millions of transactions with no surprise overages.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <div className="mt-1">
-                <Check className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Integrate seamlessly</h3>
-                <p className="text-sm text-muted-foreground">
-                  Connect with Polkadot, Substrate, and your preferred tools.
-                  Visualize in Grafana or your preferred tool.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <div className="mt-1">
-                <Check className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Enhance observability</h3>
-                <p className="text-sm text-muted-foreground">
-                  Optimize complex queries with recording rules, execute
-                  alerting rules automatically, and receive immediate
-                  notifications when issues arise.
-                </p>
-              </div>
-            </div>
-          </div>
+          <p className="text-lg text-muted-foreground mb-8">
+            Automate contracts, triggers, and cross-chain workflows — all from
+            one powerful console.
+          </p>
         </div>
       </div>
 

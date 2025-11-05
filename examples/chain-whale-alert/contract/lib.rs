@@ -6,7 +6,7 @@ mod whale_watcher {
     use ink::H160;
 
     /// A simple token-like contract that emits Transfer events.
-    /// Designed for integration with Triggr to watch for "whale" transfers.
+    /// Designed for integration with Triggr to watch and rexspond to "whale" transfers.
     
     #[ink(storage)]
     pub struct WhaleWatcher {
