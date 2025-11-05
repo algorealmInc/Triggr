@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Settings } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ThresholdConfigProps {
   onThresholdChange: (threshold: number) => void;
@@ -11,12 +12,23 @@ interface ThresholdConfigProps {
 
 const ThresholdConfig = ({ onThresholdChange, currentThreshold }: ThresholdConfigProps) => {
   const [inputValue, setInputValue] = useState(currentThreshold.toString());
+  const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const value = parseFloat(inputValue);
     if (!isNaN(value) && value > 0) {
       onThresholdChange(value);
+      toast({
+        title: "Threshold Updated",
+        description: `New alert threshold set to ${value} UNITs.`,
+      });
+    } else {
+      toast({
+        title: "Invalid Input",
+        description: "Please enter a valid number greater than 0.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -24,7 +36,7 @@ const ThresholdConfig = ({ onThresholdChange, currentThreshold }: ThresholdConfi
     <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-4 items-end">
       <div className="flex-1 w-full">
         <Label htmlFor="threshold" className="text-sm text-muted-foreground mb-2 block">
-          Alert Threshold (PAS)
+          Alert Threshold (UNIT)
         </Label>
         <Input
           id="threshold"

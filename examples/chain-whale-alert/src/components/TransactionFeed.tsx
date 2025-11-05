@@ -22,18 +22,19 @@ const TransactionFeed = ({ threshold }: TransactionFeedProps) => {
   useEffect(() => {
     // Initialize a triggr client
     const client = new TriggrSDK({
-      apiKey: "gEoaRYwVYkRWj1ry-PgQwwC4V9kjq4u8bWm9N0FEJHs",
+      apiKey: "Tm7GZLFJTzA8DifiW7Ak4UY6rNwYxcs2lQ3jxHhzv5A",
     });
 
+    // Connect
     client.connect();
 
-    client.on("open", () => {
+    client.on("connected", () => {
       console.log("Connected to Triggr");
       setIsConnected(true);
 
       // Listen for changes in the "transactions" collection
-      client.onCollectionChange("transactions", (change: any) => {
-        const tx = change.document;
+      client.onCollectionChange("transactions", (payload: any) => {
+        const tx = payload.data;
 
         // Only keep transactions above threshold
         if (tx.amount >= threshold) {
@@ -50,7 +51,7 @@ const TransactionFeed = ({ threshold }: TransactionFeedProps) => {
       });
     });
 
-    client.on("close", () => {
+    client.on("disconnected", () => {
       console.log("Disconnected from Triggr");
       setIsConnected(false);
     });
@@ -80,7 +81,7 @@ const TransactionFeed = ({ threshold }: TransactionFeedProps) => {
 
       {transactions.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
-          <p>Waiting for transactions above {threshold} PAS...</p>
+          <p>Waiting for transactions above {threshold} UNIT...</p>
         </div>
       ) : (
         <div className="space-y-3">
