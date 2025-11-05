@@ -141,7 +141,7 @@ export default function SignupPage() {
             <h2 className="text-2xl sm:text-3xl font-bold mb-2">
               Create your account
             </h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground">   
               Get started with Triggr Console
             </p>
           </div>
