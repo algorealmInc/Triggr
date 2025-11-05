@@ -15,7 +15,7 @@ export const LandingPage = () => {
         <div className="container mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img
-              src="assets/triggr-logo.png"
+              src="/triggr-logo.png"
               alt="Triggr Logo"
               className="max-w-[200px] w-full h-auto object-contain"
             ></img>
