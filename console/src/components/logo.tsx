@@ -15,7 +15,7 @@ export function Logo({ size = "sm", className = "" }: LogoProps) {
       {/* Mobile / compact logo (icon only) */}
       <div className="relative block sm:hidden">
         <img
-          src="/public/triggr.png" // icon-only logo
+          src="/triggr.png" // icon-only logo
           alt="Triggr"
           className={`${sizeClasses[size]} max-w-[200px] h-auto object-contain`}
         />
@@ -24,7 +24,7 @@ export function Logo({ size = "sm", className = "" }: LogoProps) {
       {/* Desktop / larger screens (full logo with text) */}
       <div className="relative hidden sm:block">
         <img
-          src="/public/triggr-logo.png" // full logo (icon + text)
+          src="/triggr-logo.png" // full logo (icon + text)
           alt="Triggr"
           className="max-w-[200px] h-auto object-contain"
         />
