@@ -21,6 +21,7 @@ use aes_gcm::{
     aead::{Aead, KeyInit},
     Aes256Gcm, Key, Nonce,
 };
+use serde_json::Value;
 
 /// Error type for encryption/decryption operations
 #[derive(Debug)]
@@ -149,4 +150,57 @@ pub fn introduce_triggr() {
     println!("📄 Licence: https://github.com/algorealmInc/Triggr/blob/main/LICENCE.md");
     println!("Copyright (c) 2025 Algorealm, Inc.");
     println!();
+}
+
+
+/// Process event value by stripping wrappers and converting types
+pub fn process_event_value(value: &Value) -> Value {
+    match value {
+        Value::String(s) => {
+            // Strip Some() and Ok() wrappers
+            let cleaned = strip_wrappers(s);
+            
+            // Try to parse as number first, otherwise keep as string
+            if let Ok(num) = cleaned.parse::<u128>() {
+                return Value::Number(num.into());
+            } else if let Ok(num) = cleaned.parse::<i64>() {
+                return Value::Number(num.into());
+            } else if let Ok(num) = cleaned.parse::<f64>() {
+                if let Some(json_num) = serde_json::Number::from_f64(num) {
+                    return Value::Number(json_num);
+                }
+            } else if cleaned == "true" {
+                return Value::Bool(true);
+            } else if cleaned == "false" {
+                return Value::Bool(false);
+            }
+            
+            // Return cleaned string
+            Value::String(cleaned.to_string())
+        }
+        // If it's already a proper JSON value type, return as-is
+        _ => value.clone()
+    }
+}
+
+/// Strip Some() and Ok() wrappers from a string
+pub fn strip_wrappers(value: &str) -> &str {
+    let mut result = value.trim();
+    
+    // Strip Some() wrapper
+    if result.starts_with("Some(") && result.ends_with(')') {
+        result = &result[5..result.len()-1];
+    }
+    
+    // Strip Ok() wrapper
+    if result.starts_with("Ok(") && result.ends_with(')') {
+        result = &result[3..result.len()-1];
+    }
+    
+    // Strip both in case of nested wrapping like Ok(Some(...))
+    if result.starts_with("Some(") && result.ends_with(')') {
+        result = &result[5..result.len()-1];
+    }
+    
+    result.trim()
 }
