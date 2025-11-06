@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { HeroSection } from "./hero-section";
+import { Logo } from "@/components/Logo";
 import { Database } from "lucide-react";
 import { useEffect } from "react";
 
@@ -14,11 +15,10 @@ export const LandingPage = () => {
       <nav className="fixed top-0 w-full z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">
         <div className="container mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img
-              src="/triggr-logo.png"
+            <Logo
+              size="responsive"
               alt="Triggr Logo"
-              className="max-w-[200px] w-full h-auto object-contain"
-            ></img>
+            />
           </div>
 
           <div className="flex items-center gap-6">

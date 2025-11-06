@@ -68,17 +68,15 @@ export function TriggersPage({ project }: TriggersPageProps) {
     project.contract_events ? generateDSL(project.contract_events) : ``
   );
 
-  const [triggerName, setTriggerName] = useState("Large Transaction Monitor");
-  const [triggerDescription, setTriggerDescription] = useState(
-    "Monitors and flags transactions over 1000 tokens"
-  );
+  const [triggerName, setTriggerName] = useState("");
+  const [triggerDescription, setTriggerDescription] = useState("");
   const [contractAddress, setContractAddress] = useState(
     project.contract_address
   );
 
   const [consoleOutput, setConsoleOutput] = useState<string[]>([
     "Triggr Console v1.0.0",
-    "Connected to: " + project.contract_address,
+    "Contract Address: " + project.contract_address,
     "Ready for deployment...",
   ]);
 
@@ -110,7 +108,7 @@ export function TriggersPage({ project }: TriggersPageProps) {
 
     try {
       // Remove comments from code before sending to server
-      const cleanedCode = consoleCode.replace(/\/\*[\s\S]*?\*\//g, '');
+      const cleanedCode = consoleCode.replace(/\/\*[\s\S]*?\*\//g, "");
 
       // Format the trigger code as expected by the API
       const triggerPayload = `const events = ${JSON.stringify([
@@ -511,9 +509,16 @@ export function TriggersPage({ project }: TriggersPageProps) {
                           {displayDescription}
                         </p>
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                          <span className="font-mono">
-                            Last run: {trigger.last_run}
-                          </span>
+                          {trigger.last_run ? (
+                            <span>
+                              Last run:{" "}
+                              {new Date(trigger.last_run).toLocaleString()}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/70">
+                              Never run
+                            </span>
+                          )}
                           {trigger.created && (
                             <span>
                               Deployed{" "}
