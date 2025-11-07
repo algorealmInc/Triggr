@@ -81,8 +81,8 @@ export default function LoginPage() {
         <Logo size="sm" />
       </header>
 
-      <div className="hidden lg:flex lg:w-1/2 p-8 xl:p-12 items-center bg-primary/5">
-        <div className="max-w-xl text-center">
+      <div className="hidden lg:flex lg:w-1/2 p-8 xl:p-12 mx-auto items-center bg-primary/5">
+        <div className="max-w-xl text-center mx-auto">
           <div className="inline-block px-4 py-2 bg-primary/10 rounded-full mb-6">
             <span className="text-sm font-semibold text-primary">
               Web3 Developer Platform

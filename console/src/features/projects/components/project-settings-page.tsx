@@ -114,7 +114,7 @@ export function ProjectSettingsPage({ project }: ProjectSettingsPageProps) {
       </Card>
 
       {/* API Keys */}
-      <Card className="hover:shadow-elevated transition-all duration-300">
+      {/* <Card className="hover:shadow-elevated transition-all duration-300">
         <CardHeader>
           <div className="flex items-center space-x-3">
             <Key className="h-5 w-5 text-primary" />
@@ -147,7 +147,7 @@ export function ProjectSettingsPage({ project }: ProjectSettingsPageProps) {
             </p>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* How to Connect */}
       <Card className="border-primary/20 hover:shadow-elevated transition-all duration-300">

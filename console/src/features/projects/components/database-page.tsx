@@ -159,12 +159,15 @@ export function DatabasePage({ project }: DatabasePageProps) {
     }
   };
 
-  const handleAddDocument = async (data: Record<string, any>) => {
+  const handleAddDocument = async (data: Record<string, any>, documentId?: string) => {
     if (!selectedCollection) return;
     try {
+      // Use provided documentId if available, otherwise generate a new UUID
+      const id = documentId || uuidv4();
+
       await createDocMutation.mutateAsync({
         collectionName: selectedCollection.name,
-        id: uuidv4(),
+        id,
         data: { ...data },
         metadata: {
           created_at: 0,

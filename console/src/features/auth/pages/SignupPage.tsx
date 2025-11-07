@@ -117,7 +117,7 @@ export default function SignupPage() {
         <Logo size="sm" />
       </header>
       <div className="hidden lg:flex lg:w-1/2 p-8 xl:p-12 items-center bg-primary/5">
-        <div className="max-w-xl text-center">
+        <div className="max-w-xl text-center mx-auto">
           <div className="inline-block px-4 py-2 bg-primary/10 rounded-full mb-6">
             <span className="text-sm font-semibold text-primary">
               Web3 Developer Platform
@@ -141,7 +141,7 @@ export default function SignupPage() {
             <h2 className="text-2xl sm:text-3xl font-bold mb-2">
               Create your account
             </h2>
-            <p className="text-sm text-muted-foreground">   
+            <p className="text-sm text-muted-foreground">
               Get started with Triggr Console
             </p>
           </div>
