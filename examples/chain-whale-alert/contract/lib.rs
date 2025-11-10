@@ -1,119 +1,151 @@
 #![cfg_attr(not(feature = "std"), no_std, no_main)]
 
 #[ink::contract]
-mod whale_watcher {
+mod whale_mvp {
     use ink::prelude::string::String;
+    use ink::prelude::format;
     use ink::H160;
 
-    /// A simple token-like contract that emits Transfer events.
-    /// Designed for integration with Triggr to watch and rexspond to "whale" transfers.
-    
     #[ink(storage)]
-    pub struct WhaleWatcher {
-        threshold: Balance,
+    pub struct WhaleMVP {
+        threshold: u128,
         paused: bool,
     }
 
+    // ----------------------------------------------------------
+    // EVENTS (All fields are Strings or u128 for MVP compatibility)
+    // ----------------------------------------------------------
+
     #[ink(event)]
     pub struct Transfer {
-        #[ink(topic)]
-        pub source: H160,
-        #[ink(topic)]
-        pub recipient: H160,
-        pub amount: Balance,
-        pub message: Option<String>,
+        pub source: String,
+        pub recipient: String,
+        pub amount: u128,
+        pub message: String,
     }
 
     #[ink(event)]
     pub struct ThresholdUpdated {
-        pub old_value: Balance,
-        pub new_value: Balance,
-        pub updated_by: H160,
+        pub old_value: u128,
+        pub new_value: u128,
+        pub updated_by: String,
     }
 
     #[ink(event)]
     pub struct Paused {
-        pub paused_by: H160,
+        pub paused_by: String,
     }
 
     #[ink(event)]
     pub struct Unpaused {
-        pub resumed_by: H160,
+        pub resumed_by: String,
     }
 
-    impl WhaleWatcher {
-        /// Initialize the contract with an initial threshold.
+    impl WhaleMVP {
+        // ----------------------------
+        // Constructor
+        // ----------------------------
         #[ink(constructor)]
-        pub fn new(initial_threshold: Balance) -> Self {
+        pub fn new(initial_threshold: u128) -> Self {
             Self {
                 threshold: initial_threshold,
                 paused: false,
             }
         }
 
-        /// Send a transfer and emit a `Transfer` event.
-        ///
-        /// This simulates a token transfer; it's just for demo purposes.
+        // ----------------------------
+        // TRANSFER
+        // ----------------------------
         #[ink(message)]
         pub fn transfer(
             &mut self,
             recipient: H160,
-            amount: Balance,
-            message: Option<String>,
-        ) {
+            amount: u128,
+            message: String,
+        ) -> String {
             assert!(!self.paused, "Contract is paused");
 
             let caller = self.env().caller();
 
-            // Emit a Transfer event
+            // Convert H160 → String (safe for MVP decoding)
+            let caller_str = format!("{caller:?}");
+            let recipient_str = format!("{recipient:?}");
+
+            // Emit primitive-only event
             self.env().emit_event(Transfer {
-                source: caller,
-                recipient,
+                source: caller_str,
+                recipient: recipient_str,
                 amount,
-                message,
+                message: message.clone(),
             });
+
+            String::from("TRANSFER_EMITTED")
         }
 
-        /// Update the whale detection threshold.
+        // ----------------------------
+        // UPDATE THRESHOLD
+        // ----------------------------
         #[ink(message)]
-        pub fn update_threshold(&mut self, new_value: Balance) {
+        pub fn update_threshold(&mut self, new_value: u128) -> String {
             assert!(!self.paused, "Contract is paused");
 
-            let old = self.threshold;
+            let old_value = self.threshold;
             self.threshold = new_value;
 
+            let caller = self.env().caller();
+            let caller_str = format!("{caller:?}");
+
             self.env().emit_event(ThresholdUpdated {
-                old_value: old,
+                old_value,
                 new_value,
-                updated_by: self.env().caller(),
+                updated_by: caller_str,
             });
+
+            String::from("THRESHOLD_UPDATED")
         }
 
-        /// Pause the contract (no transfers or updates allowed).
+        // ----------------------------
+        // PAUSE CONTRACT
+        // ----------------------------
         #[ink(message)]
-        pub fn pause(&mut self) {
+        pub fn pause(&mut self) -> String {
             self.paused = true;
+
+            let caller = self.env().caller();
+            let caller_str = format!("{caller:?}");
+
             self.env().emit_event(Paused {
-                paused_by: self.env().caller(),
+                paused_by: caller_str,
             });
+
+            String::from("PAUSED")
         }
 
-        /// Resume the contract.
+        // ----------------------------
+        // UNPAUSE CONTRACT
+        // ----------------------------
         #[ink(message)]
-        pub fn unpause(&mut self) {
+        pub fn unpause(&mut self) -> String {
             self.paused = false;
+
+            let caller = self.env().caller();
+            let caller_str = format!("{caller:?}");
+
             self.env().emit_event(Unpaused {
-                resumed_by: self.env().caller(),
+                resumed_by: caller_str,
             });
+
+            String::from("UNPAUSED")
         }
 
-        /// Returns the current threshold.
+        // ----------------------------
+        // GETTERS (simple primitives)
+        // ----------------------------
         #[ink(message)]
-        pub fn get_threshold(&self) -> Balance {
+        pub fn get_threshold(&self) -> u128 {
             self.threshold
         }
 
-        /// Returns whether the contract is paused.
         #[ink(message)]
         pub fn is_paused(&self) -> bool {
             self.paused

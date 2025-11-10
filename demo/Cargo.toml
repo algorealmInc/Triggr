@@ -1,0 +1,10 @@
+[package]
+name = "demo"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+scale-value = "0.18.1"
+scale-decode = "0.16.0"
+hex = "0.4.3"
+scale-info = "2.11.6"

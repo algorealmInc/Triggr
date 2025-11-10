@@ -64,6 +64,7 @@ async fn execute_trigger(
     trigger: Trigger,
     event: EventData,
 ) {
+    println!("--> {:#?}", trigger);
     // Get actions to execute
     let actions = trigger
         .rules

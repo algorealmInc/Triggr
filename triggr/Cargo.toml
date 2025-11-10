@@ -30,6 +30,7 @@ parity-scale-codec = "3.7.5"
 scale-value = "0.18.1"
 chrono = "0.4.42"
 colored = "3.0.0"
+scale-info = "2.11.6"
 
 [features]
 tracing = []

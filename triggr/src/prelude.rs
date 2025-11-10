@@ -14,7 +14,7 @@ use utoipa::ToSchema;
 
 use crate::{
     chain::{
-        polkadot::util::{ContractMetadata, SimplifiedEvent},
+        polkadot::util::{SimplifiedEvent, ContractMetadata},
         Blockchain,
     },
     dsl::Rule,

@@ -1,0 +1,744 @@
+{
+  "source": {
+    "hash": "0x418a4865a4dd62a1223ea011d2bf75ee47a8ea596c2cd863cbccf1ef3f5ef631",
+    "language": "ink! 6.0.0-alpha.4",
+    "compiler": "rustc 1.90.0",
+    "build_info": {
+      "rust_toolchain": "stable-aarch64-apple-darwin",
+      "cargo_contract_version": "6.0.0-alpha.4",
+      "build_mode": "Debug"
+    }
+  },
+  "contract": {
+    "name": "chain",
+    "version": "0.1.0",
+    "authors": [
+      "[your_name] <[your_email]>"
+    ]
+  },
+  "image": null,
+  "version": 6,
+  "types": [
+    {
+      "id": 0,
+      "type": {
+        "def": {
+          "primitive": "u128"
+        }
+      }
+    },
+    {
+      "id": 1,
+      "type": {
+        "def": {
+          "primitive": "bool"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": {
+        "path": [
+          "chain",
+          "whale_mvp",
+          "WhaleMVP"
+        ],
+        "def": {
+          "composite": {
+            "fields": [
+              {
+                "name": "threshold",
+                "type": 0,
+                "typeName": "<u128 as::ink::storage::traits::AutoStorableHint<::ink::storage\n::traits::ManualKey<1822470478u32, ()>,>>::Type"
+              },
+              {
+                "name": "paused",
+                "type": 1,
+                "typeName": "<bool as::ink::storage::traits::AutoStorableHint<::ink::storage\n::traits::ManualKey<1495229630u32, ()>,>>::Type"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": {
+        "path": [
+          "Result"
+        ],
+        "params": [
+          {
+            "name": "T",
+            "type": 4
+          },
+          {
+            "name": "E",
+            "type": 5
+          }
+        ],
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "name": "Ok",
+                "fields": [
+                  {
+                    "type": 4
+                  }
+                ],
+                "index": 0
+              },
+              {
+                "name": "Err",
+                "fields": [
+                  {
+                    "type": 5
+                  }
+                ],
+                "index": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": {
+        "def": {
+          "tuple": []
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": {
+        "path": [
+          "ink_primitives",
+          "LangError"
+        ],
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "name": "CouldNotReadInput",
+                "index": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": {
+        "path": [
+          "primitive_types",
+          "H160"
+        ],
+        "def": {
+          "composite": {
+            "fields": [
+              {
+                "type": 7,
+                "typeName": "[u8; 20]"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": {
+        "def": {
+          "array": {
+            "len": 20,
+            "type": 8
+          }
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": {
+        "def": {
+          "primitive": "u8"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": {
+        "def": {
+          "primitive": "str"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": {
+        "path": [
+          "Result"
+        ],
+        "params": [
+          {
+            "name": "T",
+            "type": 9
+          },
+          {
+            "name": "E",
+            "type": 5
+          }
+        ],
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "name": "Ok",
+                "fields": [
+                  {
+                    "type": 9
+                  }
+                ],
+                "index": 0
+              },
+              {
+                "name": "Err",
+                "fields": [
+                  {
+                    "type": 5
+                  }
+                ],
+                "index": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": {
+        "path": [
+          "Result"
+        ],
+        "params": [
+          {
+            "name": "T",
+            "type": 0
+          },
+          {
+            "name": "E",
+            "type": 5
+          }
+        ],
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "name": "Ok",
+                "fields": [
+                  {
+                    "type": 0
+                  }
+                ],
+                "index": 0
+              },
+              {
+                "name": "Err",
+                "fields": [
+                  {
+                    "type": 5
+                  }
+                ],
+                "index": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": {
+        "path": [
+          "Result"
+        ],
+        "params": [
+          {
+            "name": "T",
+            "type": 1
+          },
+          {
+            "name": "E",
+            "type": 5
+          }
+        ],
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "name": "Ok",
+                "fields": [
+                  {
+                    "type": 1
+                  }
+                ],
+                "index": 0
+              },
+              {
+                "name": "Err",
+                "fields": [
+                  {
+                    "type": 5
+                  }
+                ],
+                "index": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": {
+        "path": [
+          "ink_primitives",
+          "types",
+          "AccountId"
+        ],
+        "def": {
+          "composite": {
+            "fields": [
+              {
+                "type": 14,
+                "typeName": "[u8; 32]"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": {
+        "def": {
+          "array": {
+            "len": 32,
+            "type": 8
+          }
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": {
+        "path": [
+          "ink_primitives",
+          "types",
+          "Hash"
+        ],
+        "def": {
+          "composite": {
+            "fields": [
+              {
+                "type": 14,
+                "typeName": "[u8; 32]"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 16,
+      "type": {
+        "def": {
+          "primitive": "u64"
+        }
+      }
+    },
+    {
+      "id": 17,
+      "type": {
+        "def": {
+          "primitive": "u32"
+        }
+      }
+    }
+  ],
+  "storage": {
+    "root": {
+      "root_key": "0x00000000",
+      "layout": {
+        "struct": {
+          "name": "WhaleMVP",
+          "fields": [
+            {
+              "name": "threshold",
+              "layout": {
+                "leaf": {
+                  "key": "0x00000000",
+                  "ty": 0
+                }
+              }
+            },
+            {
+              "name": "paused",
+              "layout": {
+                "leaf": {
+                  "key": "0x00000000",
+                  "ty": 1
+                }
+              }
+            }
+          ]
+        }
+      },
+      "ty": 2
+    }
+  },
+  "spec": {
+    "constructors": [
+      {
+        "label": "new",
+        "selector": "0x9bae9d5e",
+        "payable": false,
+        "args": [
+          {
+            "label": "initial_threshold",
+            "type": {
+              "type": 0,
+              "displayName": [
+                "u128"
+              ]
+            }
+          }
+        ],
+        "returnType": {
+          "type": 3,
+          "displayName": [
+            "ink_primitives",
+            "ConstructorResult"
+          ]
+        },
+        "docs": [],
+        "default": false
+      }
+    ],
+    "messages": [
+      {
+        "label": "transfer",
+        "selector": "0x84a15da1",
+        "mutates": true,
+        "payable": false,
+        "args": [
+          {
+            "label": "recipient",
+            "type": {
+              "type": 6,
+              "displayName": [
+                "H160"
+              ]
+            }
+          },
+          {
+            "label": "amount",
+            "type": {
+              "type": 0,
+              "displayName": [
+                "u128"
+              ]
+            }
+          },
+          {
+            "label": "message",
+            "type": {
+              "type": 9,
+              "displayName": [
+                "String"
+              ]
+            }
+          }
+        ],
+        "returnType": {
+          "type": 10,
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ]
+        },
+        "docs": [],
+        "default": false
+      },
+      {
+        "label": "update_threshold",
+        "selector": "0xf8f6e57c",
+        "mutates": true,
+        "payable": false,
+        "args": [
+          {
+            "label": "new_value",
+            "type": {
+              "type": 0,
+              "displayName": [
+                "u128"
+              ]
+            }
+          }
+        ],
+        "returnType": {
+          "type": 10,
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ]
+        },
+        "docs": [],
+        "default": false
+      },
+      {
+        "label": "pause",
+        "selector": "0x81e0c604",
+        "mutates": true,
+        "payable": false,
+        "args": [],
+        "returnType": {
+          "type": 10,
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ]
+        },
+        "docs": [],
+        "default": false
+      },
+      {
+        "label": "unpause",
+        "selector": "0x67616649",
+        "mutates": true,
+        "payable": false,
+        "args": [],
+        "returnType": {
+          "type": 10,
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ]
+        },
+        "docs": [],
+        "default": false
+      },
+      {
+        "label": "get_threshold",
+        "selector": "0x23122a1d",
+        "mutates": false,
+        "payable": false,
+        "args": [],
+        "returnType": {
+          "type": 11,
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ]
+        },
+        "docs": [],
+        "default": false
+      },
+      {
+        "label": "is_paused",
+        "selector": "0xfa7d505b",
+        "mutates": false,
+        "payable": false,
+        "args": [],
+        "returnType": {
+          "type": 12,
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ]
+        },
+        "docs": [],
+        "default": false
+      }
+    ],
+    "events": [
+      {
+        "label": "Transfer",
+        "module_path": "chain::whale_mvp",
+        "signature_topic": "0xe8ef93024d2facbef5d00b53971fc6c8a7e645a7a88e11c2067b9ccc8575dd31",
+        "args": [
+          {
+            "label": "source",
+            "indexed": false,
+            "type": {
+              "type": 9,
+              "displayName": [
+                "String"
+              ]
+            },
+            "docs": []
+          },
+          {
+            "label": "recipient",
+            "indexed": false,
+            "type": {
+              "type": 9,
+              "displayName": [
+                "String"
+              ]
+            },
+            "docs": []
+          },
+          {
+            "label": "amount",
+            "indexed": false,
+            "type": {
+              "type": 0,
+              "displayName": [
+                "u128"
+              ]
+            },
+            "docs": []
+          },
+          {
+            "label": "message",
+            "indexed": false,
+            "type": {
+              "type": 9,
+              "displayName": [
+                "String"
+              ]
+            },
+            "docs": []
+          }
+        ],
+        "docs": []
+      },
+      {
+        "label": "ThresholdUpdated",
+        "module_path": "chain::whale_mvp",
+        "signature_topic": "0xa36914b4e6e6b65947c399d738dd2b841eb78e03cebd3a203367872bdbb23b4d",
+        "args": [
+          {
+            "label": "old_value",
+            "indexed": false,
+            "type": {
+              "type": 0,
+              "displayName": [
+                "u128"
+              ]
+            },
+            "docs": []
+          },
+          {
+            "label": "new_value",
+            "indexed": false,
+            "type": {
+              "type": 0,
+              "displayName": [
+                "u128"
+              ]
+            },
+            "docs": []
+          },
+          {
+            "label": "updated_by",
+            "indexed": false,
+            "type": {
+              "type": 9,
+              "displayName": [
+                "String"
+              ]
+            },
+            "docs": []
+          }
+        ],
+        "docs": []
+      },
+      {
+        "label": "Paused",
+        "module_path": "chain::whale_mvp",
+        "signature_topic": "0xb73dd34074100d5c7f150e60f0801b533b62b57f1f6e5862314cb25ed68230ed",
+        "args": [
+          {
+            "label": "paused_by",
+            "indexed": false,
+            "type": {
+              "type": 9,
+              "displayName": [
+                "String"
+              ]
+            },
+            "docs": []
+          }
+        ],
+        "docs": []
+      },
+      {
+        "label": "Unpaused",
+        "module_path": "chain::whale_mvp",
+        "signature_topic": "0x93e86a8f3cc0c1699bc5ba6c2f84e89c5c265e45cfca43c213b495cb3c27b4fc",
+        "args": [
+          {
+            "label": "resumed_by",
+            "indexed": false,
+            "type": {
+              "type": 9,
+              "displayName": [
+                "String"
+              ]
+            },
+            "docs": []
+          }
+        ],
+        "docs": []
+      }
+    ],
+    "docs": [],
+    "lang_error": {
+      "type": 5,
+      "displayName": [
+        "ink",
+        "LangError"
+      ]
+    },
+    "environment": {
+      "accountId": {
+        "type": 13,
+        "displayName": [
+          "AccountId"
+        ]
+      },
+      "balance": {
+        "type": 0,
+        "displayName": [
+          "Balance"
+        ]
+      },
+      "hash": {
+        "type": 15,
+        "displayName": [
+          "Hash"
+        ]
+      },
+      "timestamp": {
+        "type": 16,
+        "displayName": [
+          "Timestamp"
+        ]
+      },
+      "blockNumber": {
+        "type": 17,
+        "displayName": [
+          "BlockNumber"
+        ]
+      },
+      "nativeToEthRatio": 100000000,
+      "staticBufferSize": 16384
+    }
+  }
+}

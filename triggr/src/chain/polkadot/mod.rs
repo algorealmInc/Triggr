@@ -13,6 +13,7 @@ pub mod util;
 
 use prelude::*;
 use tracing::info;
+use parity_scale_codec::Decode;
 
 use crate::{chain::polkadot::util::*, prelude::Triggr};
 
@@ -23,7 +24,7 @@ pub struct Polkadot;
 impl Polkadot {
     /// Connect to a contracts node and listen for event changes
     pub async fn connect(address: &str) -> Api<DefaultRuntimeConfig, JsonrpseeClient> {
-        info!("Connecting to {}", address);
+        println!("Connecting to {}", address);
 
         // Connect to node
         let client = JsonrpseeClient::new(address)
@@ -51,7 +52,7 @@ impl Polkadot {
         while let Some(events_result) = sub.next_events_from_metadata().await {
             match events_result {
                 Ok(events) => {
-                    info!("📦 Block: #{:?}", events.block_hash());
+                    println!("📦 Block: #{:?}", events.block_hash());
 
                     // Iterate through decoded events
                     for event in events.iter() {
@@ -59,7 +60,7 @@ impl Polkadot {
                             Ok(event_details) => {
                                 let pallet_name = event_details.pallet_name();
 
-                                info!("[{}]", pallet_name);
+                                println!("[{}]", pallet_name);
 
                                 // Only process pallet Revive (contracts) events
                                 if pallet_name != "Revive" {
@@ -70,6 +71,8 @@ impl Polkadot {
                                 match event_details.field_values() {
                                     Ok(fields) => {
                                         let field_vec: Vec<&Value<u32>> = fields.values().collect();
+
+                                        // println!("{:?}", field_vec[1]);
 
                                         // Extract contract address (first field) and event data (second field)
                                         if field_vec.len() >= 2 {
@@ -84,21 +87,29 @@ impl Polkadot {
                                                         hex::encode(&contract_address)
                                                     );
 
-                                                    info!(
+                                                    println!(
                                                         "   📍 Contract Address: {}",
                                                         addr_bytes
                                                     );
-                                                    info!(
+                                                    println!(
                                                         "   📦 Event Data (hex): 0x{}",
                                                         hex::encode(&event_bytes)
                                                     );
 
                                                     // Only try to decode contracts we care about
                                                     let cache = triggr.cache.read().await;
-                                                    info!("{:#?} -> {}", cache.contract.keys(), addr_bytes);
+                                                    // println!("{:#?}", cache.contract);
                                                     if let Some(metadata) =
                                                         cache.contract.get(&addr_bytes)
                                                     {
+                                                        let mut cursor = &event_bytes[..];
+
+                                                        // ink! stores event index in the first byte
+                                                        let event_index = u8::decode(&mut cursor);
+
+                                                        println!("EEEII: {:?}", event_index);
+                                                        // println!("{:?}", metadata);
+                                                        // println!("{}", addr_bytes);
                                                         // Decode contract event and send to handler
                                                         decode_contract_event_with_metadata(
                                                             tx.clone(),
@@ -113,18 +124,18 @@ impl Polkadot {
                                         }
                                     }
                                     Err(e) => {
-                                        info!("   ❌ Could not decode fields: {:?}", e);
+                                        println!("   ❌ Could not decode fields: {:?}", e);
                                     }
                                 }
                             }
                             Err(e) => {
-                                info!("❌ Could not decode event: {:?}", e);
+                                println!("❌ Could not decode event: {:?}", e);
                             }
                         }
                     }
                 }
                 Err(e) => {
-                    info!("⚠️ Error while receiving events: {:?}", e);
+                    println!("⚠️ Error while receiving events: {:?}", e);
                 }
             }
         }
