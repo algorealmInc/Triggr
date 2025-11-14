@@ -90,11 +90,11 @@ export default function LoginPage() {
           </div>
 
           <h1 className="text-4xl xl:text-5xl font-bold mb-6 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
-            Build Web3 Apps Faster with Triggr
+            Build Reactive Dapps Faster with Triggr
           </h1>
 
           <p className="text-lg text-muted-foreground mb-8">
-            Automate contracts, triggers, and cross-chain workflows — all from
+            Automate chain event responses, triggers and database state — all from
             one powerful console.
           </p>
         </div>

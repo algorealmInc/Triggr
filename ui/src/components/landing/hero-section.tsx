@@ -49,8 +49,8 @@ export const HeroSection = () => {
             transition={{ duration: 0.8, delay: 0.3 }}
             className="text-5xl md:text-7xl font-bold tracking-tight text-foreground"
           >
-            Build <span className="text-primary">Real-Time</span> Decentralized
-           Applications
+            Build <span className="text-primary"> Real-Time</span>  Dapps
+            Faster and Easily
           </motion.h1>
 
           {/* Subheading */}
