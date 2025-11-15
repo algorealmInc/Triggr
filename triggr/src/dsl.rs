@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
-use crate::chain::polkadot::prelude::EventData;
+use crate::{chain::polkadot::prelude::EventData, util::generate_uuid};
 /// Dsl Event Definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventDefinition {
@@ -485,13 +485,15 @@ impl DslParser {
         // Check if it has a colon (collection:id format)
         if let Some(colon_pos) = input.find(':') {
             let collection = input[..colon_pos].trim().to_string();
-            let id = input[colon_pos + 1..].trim().to_string();
+            let mut id = input[colon_pos + 1..].trim().to_string();
 
             if collection.is_empty() {
                 return Err("Empty collection name".to_string());
             }
             if id.is_empty() {
-                return Err("Empty id".to_string());
+                // Generate random UUID
+                id = generate_uuid();
+                // return Err("Empty id".to_string());
             }
 
             Ok((collection, id))

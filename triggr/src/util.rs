@@ -2,6 +2,7 @@
 
 use base64::{Engine as _, engine::general_purpose};
 use rand::{TryRngCore, rngs::OsRng, RngCore};
+use uuid::Uuid;
 
 /// Generate a random nonce.
 ///
@@ -203,4 +204,8 @@ pub fn strip_wrappers(value: &str) -> &str {
     }
     
     result.trim()
+}
+
+pub fn generate_uuid() -> String {
+    Uuid::new_v4().to_string()
 }

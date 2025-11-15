@@ -129,7 +129,7 @@ export default function SignupPage() {
           </h1>
 
           <p className="text-lg text-muted-foreground mb-8">
-          Automate chain event responses, triggers and database state — all from
+          Automate chain event responses, triggers and database state changes — all from
             one powerful console.
           </p>
         </div>
