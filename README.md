@@ -1,20 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="436.79999999999995 873.5999999999999 1230.6 378" width="106" height="48" style="max-height: 500px;"><path fill="#E6007A" d="M577.697 1033.19H705.993L543.931 1220.99H519.477L577.697 1033.19Z"></path><path fill="#FF55AF" d="M587.207 1088.66H458.911L620.973 900.867H645.427L587.207 1088.66Z"></path><path fill="#FF87C7" d="M587.207 1088.66H560.5L577.696 1033.19H604.403L587.207 1088.66Z"></path><path fill="#E6007A" d="M1232.19 1161.9C1192.25 1161.9 1162.22 1129.7 1162.22 1087.29C1162.22 1045.18 1192.25 1013.29 1232.19 1013.29C1251.39 1013.29 1267.49 1020.41 1278.02 1032.18V1016.39H1312.07V1158.81C1312.07 1201.53 1280.18 1230.02 1233.74 1230.02C1202.47 1230.02 1178.63 1218.25 1164.08 1197.51L1186.37 1175.22C1198.14 1190.08 1213 1197.51 1234.36 1197.51C1261.3 1197.51 1278.02 1182.96 1278.02 1158.81V1142.71C1267.49 1154.78 1251.39 1161.9 1232.19 1161.9ZM1239.01 1129.7C1263.77 1129.7 1280.18 1112.99 1280.18 1087.6C1280.18 1062.21 1263.77 1045.49 1239.01 1045.49C1214.24 1045.49 1197.21 1062.52 1197.21 1087.6C1197.21 1112.68 1214.24 1129.7 1239.01 1129.7Z"></path><path fill="#E6007A" d="M1099.55 1164.41V1015.8H1133.6V1164.41H1099.55Z"></path><path fill="#E6007A" d="M973.152 1165V1016.39H1007.21V1031.87C1015.57 1020.1 1028.57 1013.29 1045.91 1013.29C1060.77 1013.29 1072.54 1018.55 1082.75 1030.32L1060.46 1053.23C1054.89 1047.66 1048.7 1045.18 1040.03 1045.18C1020.83 1045.18 1007.21 1056.95 1007.21 1082.33V1165H973.152Z"></path><path fill="#E6007A" d="M872.047 1165V980.781H801.456V948.272H978.244V980.781H907.653V1165H872.047Z"></path><path fill="#E6007A" d="M1410.43 1161.9C1370.49 1161.9 1340.46 1129.7 1340.46 1087.29C1340.46 1045.18 1370.49 1013.29 1410.43 1013.29C1429.63 1013.29 1445.73 1020.41 1456.25 1032.18V1016.39H1490.31V1158.81C1490.31 1201.53 1458.42 1230.02 1411.98 1230.02C1380.71 1230.02 1356.87 1218.25 1342.32 1197.51L1364.61 1175.22C1376.38 1190.08 1391.24 1197.51 1412.6 1197.51C1439.54 1197.51 1456.25 1182.96 1456.25 1158.81V1142.71C1445.73 1154.78 1429.63 1161.9 1410.43 1161.9ZM1417.24 1129.7C1442.01 1129.7 1458.42 1112.99 1458.42 1087.6C1458.42 1062.21 1442.01 1045.49 1417.24 1045.49C1392.47 1045.49 1375.45 1062.52 1375.45 1087.6C1375.45 1112.68 1392.47 1129.7 1417.24 1129.7Z"></path><path fill="#E6007A" d="M1527.97 1165V1016.39H1562.03V1031.87C1570.39 1020.1 1583.39 1013.29 1600.73 1013.29C1615.59 1013.29 1627.36 1018.55 1637.58 1030.32L1615.28 1053.23C1609.71 1047.66 1603.52 1045.18 1594.85 1045.18C1575.65 1045.18 1562.03 1056.95 1562.03 1082.33V1165H1527.97Z"></path><rect fill="#E6007A" height="36.8661" width="36.8661" y="950.251" x="1098.14"></rect></svg>
 
 # Welcome to Triggr
 
-Triggr is a reactive backend used to build real-time decentralized applications.  
-With Triggr, your application updates instantly whenever your smart contract emits an event — no polling, no delays.
+The only way blockchains communicated naturally and in real time it by emitting events. Events are a powerful construct in blockchains because they serve as an interface to the outside world. They inform the outside world about important state changes happening on chain. (Everyday) Applications have found ways to know about state changes happening onchain through indexing, polling, or even tediously connecting and listening trough websockets. All to get the application to respond to some condition change. That is exactly why Triggr is built.
+
+Triggr is a reactive backend that listens for onchain events and provides an easy interface for applications to specify actions to be performed when these onchain changes occur and we are notified by events. With Triggr, your application updates instantly whenever your smart contract emits an event — no polling, no delays, all in real time. Triggr eliminates indexing and polling of the chain, just to make state changes to your application. As a Polkadot developer, you need not worry about anythibg but your application business logic and what to do when state chainges occur in your contract.
 
 ---
 
 ## How Does It Work?
 
-1. **Write your contract** and define the events your application should react to.
-2. **Upload your contract and publish it** on PassetHub using the Contracts UI.
-3. **Create a Triggr account** and set up a project.
-4. **Write triggers** to react and update your database whenever the blockchain emits an event.
-5. **Install the TypeScript SDK** and integrate it into your frontend/backend.
-6. **Enjoy reactive event-driven programming!**
+1. Write your contract using ink! or solidity and compile to generate your `contract.json` file.
+1. Create a project on Triggr and upload your `contract.json` file. When you do this, Triggr automatically extracts the events for you and places it in a console for you to instruct it on what to do when thos events occur.
+1. Write your triggers in the console and deploy them. Events defined in the contracts file are always exposed in the console automatically for your trigger logic to use them.
+1. Install the `TypeScript SDK` and react to state changes in your application.
+1. Enjoy reactive event-driven programming!
 
 ---
 
