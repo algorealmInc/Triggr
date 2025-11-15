@@ -1,5 +1,5 @@
 
-# Triggr - A Reactive Backend For Building Real-time Dapps.
+# ⚡️ Triggr - A Reactive Backend For Building Real-time Dapps.
 
 The only way blockchains communicate naturally and in real time it by emitting events. Events are a powerful construct in blockchains because they serve as an interface to the outside world. They inform the outside world about important state changes happening on chain. (Everyday) Applications have found ways to know about state changes happening onchain through indexing, polling, or even tediously connecting and listening through websockets (and handling its failures). Using websockets, application have to listen, filter, clean, then SCALE-decode (AND DEBUG!) the data from the chain, just to get the application to respond to some condition change. Worse still, you need to be quite technical to do all that. All that goes away with Triggr.
 
@@ -15,18 +15,16 @@ Triggr is a reactive backend that listens for onchain events and provides an eas
 1. Install the `TypeScript SDK` and react to state changes in real-time, in your application.
 1. Enjoy reactive event-driven programming!
 
----
-
 ### Directory Structure
 Triggr is deployed and available [online](https://triggr.cloud). It is all built in a monorepo:
 - The **console** directory contains front-end code for the [Triggr console](https://console.triggr.cloud). It connects and send requests to the triggr node to perform various operations e.g create project, store triggers, modify database state etc.
 - The **examples** directory contains an example of a complete front-end application completely built on Triggr. The example is explained below.
-- The **sdk** directory contains a simple Typescript SDK to be used in your application to query triggr and respond to state changes. It is deployed here on [npm](https://www.npmjs.com/package/triggr-ts-sdk).
+- The **sdk** directory contains a simple Typescript SDK to be used in your application to query Triggr and respond to state changes (due to chain events). It is deployed here on [npm](https://www.npmjs.com/package/triggr-ts-sdk).
 - The **ui** direatory contains the front-end code for the Triggr landing page.
 - The **triggr** directory contains the Rust code for the triggr node itself. It includes a webserver, a database, a DSL parser and executor, a connection to a contract chain etc.
 
 
-### Triggr Architecture
+## Architecture
 Triggr consists on majorly 4 parts working together:
 1. A webserver module to recieve incoming request from console and dapps.
 1. A storage module that contains an embedded key-value datastore - `Sled` for application data storage.
@@ -34,10 +32,15 @@ Triggr consists on majorly 4 parts working together:
 1. A chain module for connecting to Blockchains, listening, parsing, decoding, and serializing events.
 
 
-#### Diagram
+### Diagram
+
+### Technologies
+- Rust i.e `scale-info`, `substrate-api-client`, `parity-scale-code`, `axum`, `sled` etc.
+- React/Typescript for the UI.
+- Contracts.json
 
 
-## Triggr DSL
+## Triggers
 Triggr has a very small but expressive rule language used to define how your database should make state changes when events are emitted.
 
 There are **three core operations**:
@@ -47,16 +50,24 @@ There are **three core operations**:
 
 All comparisons between event parameters and constants are supported.
 
----
+### Examples
+These are `triggers` written to modify database state when events are emitted. The events are always exposed automatically in the console. This is made possible throught the uploaded `contacts.json` file.
 
-### DSL Examples
-
-## INSERT Example
+#### INSERT
 
 ```rust
-fn main(event) {
-    insert @id {
-        amount: 5000,
+/* Events defined in your contract */
+  const events = [
+    ValueChanged { from, value, message } 
+    FundsDeposited { amount } 
+    EscrowPaused { fee }
+]
+
+fn main(events) {
+    /* No matter the event, insert the record */
+    insert @users:tx1 {
+        amount: events.ValueChanged.value,
+        message: events.ValueChanged.message,
         status: "created"
     }
 }
@@ -64,46 +75,64 @@ fn main(event) {
 
 ---
 
-## UPDATE Example
+#### UPDATE
 
 ```rust
-fn main(event) {
-    if (event.amount > 1000) {
-        update @id {
-            status: "large"
+/* Events defined in your contract */
+  const events = [
+    ValueChanged { from, value, message }  
+]
+
+fn main(events) {
+    if (events.ValueChanged.value > 200) {
+        update @users:tx10 {
+            amount: events.ValueChanges.value,
         }
+    } else {
+        delete @users:tx9
     }
+   
 }
 ```
 
 ---
 
-## DELETE Example
+#### DELETE
 
 ```rust
+/* Events defined in your contract */
+  const events = [
+    ValueChanged { from, value, message }  
+]
+
 fn main(event) {
-    if (event.flag == false) {
-        delete @id
+    if (events.ValueChanged.value > 200) {
+        delete @users:tx1
     }
 }
 ```
 
 ---
 
-# How to Write DSL
-
+### How to Write Triggers
+Triggers watch out for events that match their condition and executes the rules that was set e.g deleting a record.
 Below are four common patterns.
 
 ---
 
-## 1. Using a Conditional
+1. Using a Conditional
 
 Reacting to events with a condition:
 
 ```rust
+/* Events defined in your contract */
+  const events = [
+    NftMinted { total_supply, amount }
+]
+
 fn main(event) {
-    if (event.value > 20000) {
-        insert @id {
+    if (event.NftMinted.total_supply > 20000) {
+        update @collection:doc_id {
             category: "high"
         }
     }
@@ -112,51 +141,79 @@ fn main(event) {
 
 ---
 
-## 2. No Conditionals
+2. No Conditionals
 
-Simple triggers without conditions:
+Simple triggers without conditions, these are executed any time any events are emitted from your contract:
 
 ```rust
+/* Events defined in your contract */
+  const events = [
+    NftMinted { total_supply, amount }
+]
+
 fn main(event) {
-    insert @id {
-        account: event.account,
-        amount: 100
+    /* Record NFT minting always */
+    insert @collection:doc_id {
+        total_supply: events.NftMinted.total_supply,
+        amount: events.NftMinted.amount
     }
-}
+}  
 ```
 ---
 
-## 3. Dynamic ID
+3. Dynamic ID
 
-Let Triggr assign the ID automatically:
+Let Triggr assign the ID automatically. This is done by leaving out the `document id` after the `:`. Triggr understands this and will generate a `UUID` as the key for the record.
 
 ```rust
+/* Events defined in your contract */
+  const events = [
+    NftMinted { total_supply, amount }
+]
+
 fn main(event) {
-    insert {
-        source: event.source,
-        timestamp: event.timestamp
+    /* Record NFT minting always */
+    insert @collection: {
+        total_supply: events.NftMinted.total_supply,
+        amount: 49
     }
-}
+}  
 ```
 ---
 
-## 4. Writing Event Data to Storage
+4. Writing Event Data to Storage
 
-Store event fields directly into the database:
+Store event fields directly into the database. Triggr is able to understand when real-time events data are to be stored:
 
 ```rust
+/* Events defined in your contract */
+  const events = [
+    NftMinted { total_supply, amount }
+]
+
 fn main(event) {
-    update @id {
-        sender: event.sender,
-        recipient: event.recipient,
-        transferred: event.amount
+    /* Record NFT minting always */
+    insert @collection:doc_id {
+        total_supply: events.NftMinted.total_supply,
+        amount: events.NftMinted.amount
     }
-}
+}  
 ```
+
+#### Rules for writing Triggers
+1. A trigger must always be in a `main` function.
+1. You cannot write more that one triggers at a time, except branching it out using a conditional.
+
+The Triggr DSL is still very young.
 
 ---
 
-# Why Use Triggr?
+### Triggr SDK
+Triggr SDK allows applications to easily send queries and react to state changes on Triggr (propelled directly by onchain events). The SDK is published on [npm](https://www.npmjs.com/package/triggr-ts-sdk) and is explained in detail [here](https://github.com/algorealmInc/Triggr/tree/main/sdk).
+
+### Example
+
+### Why Should Anyone Care?
 
 - Build reactive applications without polling
 - Simplify backend logic dramatically
@@ -166,16 +223,6 @@ fn main(event) {
 - Fast rule execution with predictable performance
 - Designed for developers who want **power without complexity**
 
----
+### Improvements and next steps 
 
-# GitHub
-
-Coming soon…
-
-EXAMPLES
-
-SDK
-
-TECHNOLOGIES
-
-WHY SHOULD ANYONE CARE?
+### Conclusion
