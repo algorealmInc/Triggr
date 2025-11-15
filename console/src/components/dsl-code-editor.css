@@ -140,6 +140,11 @@
   color: #f472b6;
 }
 
+.syntax-bracket {
+  color: #e6007a;
+  font-weight: 500;
+}
+
 .syntax-operator {
   color: #cbd5e1;
 }
