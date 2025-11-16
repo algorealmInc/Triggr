@@ -251,4 +251,4 @@ Triggr is an incredibly useful platform that can speed up and simplify Web3 appl
 
 Web3 developers can have nice things 😊
 
-Copyright (c) Algorealm, Inc.
+Copyright (c) 2025 Algorealm, Inc.
