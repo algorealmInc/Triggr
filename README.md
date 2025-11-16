@@ -206,10 +206,15 @@ Here is how it works in detail:
 3. Then we create a project on Triggr, specifying our contract details:
 <img src="https://github.com/algorealmInc/Triggr/blob/main/public/triggr-shot-1.png">
 4. After that, we then define triggers to execute when our events are emitted:
+<img src="https://github.com/algorealmInc/Triggr/blob/main/public/triggr-shot-2.png">
 
 This triggr writes to the database when the `ValueChanged` event is emitted. We can see that the events defined in the contract automatically appears in the console to be used for trigger login in `main`.
 5. We then navigate to the [contracts UI](https://ui.use.ink/contract/0x25b322C78C16E0A20DCebECAAef82A0a2976624b) and call the `increment` function so that the `ValueChanged` event can be emitted. (Ensure you have a PAS balance to call the contract.)
+<img src="https://github.com/algorealmInc/Triggr/blob/main/public/triggr-shot-4.png">
+
 6. We then go to check our database and see that storage has been modified automatically after event emitted and trigger fired.
+<img src="https://github.com/algorealmInc/Triggr/blob/main/public/triggr-shot-5.png">
+
 7. Viola! The database has been updated due to our onchain event which in turn then notified the front-end, through the triggr `SDK`. No hassle, no stress. Pure magic!
 
 It is as simple and magical as that.
