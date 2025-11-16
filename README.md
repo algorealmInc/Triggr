@@ -51,7 +51,7 @@ There are **three core operations**:
 All comparisons between event parameters and constants are supported.
 
 ### Examples
-These are `triggers` written to modify database state when events are emitted. The events are always exposed automatically in the console. This is made possible throught the uploaded `contacts.json` file.
+These are `triggers` are written to modify database state when events are emitted. The events are always exposed automatically in the console. This is made possible throught the uploaded `contacts.json` file.
 
 #### INSERT
 
@@ -115,14 +115,12 @@ fn main(event) {
 ---
 
 ### How to Write Triggers
-Triggers watch out for events that match their condition and executes the rules that was set e.g deleting a record.
-Below are four common patterns.
+Triggers watch out for events that match their condition and execute the rules that was set e.g deleting a record.
+Below are the four major patterns of writing triggers:
 
 ---
 
-1. Using a Conditional
-
-Reacting to events with a condition:
+1. Using a Conditional i.e reacting to events with a condition:
 
 ```rust
 /* Events defined in your contract */
@@ -141,9 +139,7 @@ fn main(event) {
 
 ---
 
-2. No Conditionals
-
-Simple triggers without conditions, these are executed any time any events are emitted from your contract:
+2. No Conditionals i.e simple triggers without conditions, these are executed any time any event is emitted from your contract:
 
 ```rust
 /* Events defined in your contract */
@@ -161,9 +157,7 @@ fn main(event) {
 ```
 ---
 
-3. Dynamic ID
-
-Let Triggr assign the ID automatically. This is done by leaving out the `document id` after the `:`. Triggr understands this and will generate a `UUID` as the key for the record.
+3. Dynamic ID i.e letting Triggr assign the ID automatically. This is done by leaving out the `document id` after the `:`. Triggr understands this and will generate a `UUID` as the key for the record internally.
 
 ```rust
 /* Events defined in your contract */
@@ -181,9 +175,7 @@ fn main(event) {
 ```
 ---
 
-4. Writing Event Data to Storage
-
-Store event fields directly into the database. Triggr is able to understand when real-time events data are to be stored:
+4. Writing Event data directly into the database. Triggr is able to understand when real-time event data need to be stored:
 
 ```rust
 /* Events defined in your contract */
@@ -202,9 +194,7 @@ fn main(event) {
 
 #### Rules for writing Triggers
 1. A trigger must always be in a `main` function.
-1. You cannot write more that one triggers at a time, except branching it out using a conditional.
-
-The Triggr DSL is still very young.
+1. You cannot write more that one triggers at a time, except branching it out by using a conditional.
 
 ---
 
@@ -224,5 +214,12 @@ Triggr SDK allows applications to easily send queries and react to state changes
 - Designed for developers who want **power without complexity**
 
 ### Improvements and next steps 
+1. The SCALE-decoding is not perfect. We will improve and perfect the scale decoding of event data so all contracts event can be parsed.
+1. Triggr runs on a single centralized node. We will make it decentralized and synchronize the nodes using [SwarmNL].
+1. We will make Triggr more generic to accomodate more chains e.g Ethereum
+1. Make triggers more generic, powerful and capable e.g integration with telegram.
 
 ### Conclusion
+Triggr is an incredibly useful platform that can speed up and simplify Web3 application developments. You can easily build real-time apps and worry only about your business logic and contract logic. Congratulations!
+
+Web3 developers can have nice things 😊
