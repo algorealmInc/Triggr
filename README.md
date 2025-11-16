@@ -1,4 +1,6 @@
 
+<img src="https://github.com/algorealmInc/Triggr/blob/main/public/logo.png">
+
 # ⚡️ Triggr - A Reactive Backend For Building Real-time Dapps.
 
 The only way blockchains communicate naturally and in real time it by emitting events. Events are a powerful construct in blockchains because they serve as an interface to the outside world. They inform the outside world about important state changes happening on chain. (Everyday) Applications have found ways to know about state changes happening onchain through indexing, polling, or even tediously connecting and listening through websockets (and handling its failures). Using websockets, application have to listen, filter, clean, then SCALE-decode (AND DEBUG!) the data from the chain, just to get the application to respond to some condition change. Worse still, you need to be quite technical to do all that. All that goes away with Triggr.
