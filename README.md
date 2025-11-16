@@ -226,8 +226,8 @@ It is as simple and magical as that.
 
 #### Demo Links
 1. [Contracts UI](https://ui.use.ink/contract/0x25b322C78C16E0A20DCebECAAef82A0a2976624b)
-2. `Contracts.json` file
-2. [Demo front-end]
+2. [Contracts.json](https://github.com/algorealmInc/Triggr/blob/main/examples/demo/contract/event_demo.json) file
+2. [Deployed front-end](https://demo.triggr.cloud)
 
 ## Why Should Anyone Care?
 
