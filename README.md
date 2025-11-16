@@ -196,20 +196,21 @@ fn main(event) {
 Triggr SDK allows applications to easily send queries and react to state changes on Triggr (propelled directly by onchain events). The SDK is published on [npm](https://www.npmjs.com/package/triggr-ts-sdk) and is explained in detail [here](https://github.com/algorealmInc/Triggr/tree/main/sdk).
 
 ## Example
-The Demo examples showcases the power and potential of Triggr. In Demo, we have a dummy contract that emits events. When these events are emitted, we see that the triggers written in response to the events spring into action immediately and modify database state, which notifies the front-end in real-time. So when a event is generated, here is the passage or flow of data:
+The Demo examples showcases the power and potential of Triggr. In Demo, we have a dummy contract that emits events. When these events are emitted, we see that the triggers written in response to the events spring into action immediately and modify database state, which notifies the front-end in real-time. Here is the data flow:
 
 Contract Events -> Triggers -> Database Changes -> Front-end update.
 
-Here is it works in detail:
-1. We define our ink! contract to emit event due to state changes in our contract storage. [Here](https://github.com/algorealmInc/Triggr/blob/main/examples/demo/contract/lib.rs) is our contracts file.
-1. We then deploy the demo contract to Passethub with contract address `0x25b322C78C16E0A20DCebECAAef82A0a2976624b`. To interact with the contract and see the demo work in real time, submit extrinsics here on the [contracts UI](https://ui.use.ink/contract/0x25b322C78C16E0A20DCebECAAef82A0a2976624b).
-1. Then we create a project on Triggr, specifying our contract details:
-1. After that, we then define triggers to execute when our events are emitted:
+Here is how it works in detail:
+1. We define our ink! contract to emit event due to state changes in our contract storage. [Here](https://github.com/algorealmInc/Triggr/blob/main/examples/demo/contract/lib.rs) is our contract file.
+2. We then deploy the demo contract to Passethub with contract address `0x25b322C78C16E0A20DCebECAAef82A0a2976624b`. To interact with the contract and see the demo work in real time, submit extrinsics here on the [contracts UI](https://ui.use.ink/contract/0x25b322C78C16E0A20DCebECAAef82A0a2976624b).
+3. Then we create a project on Triggr, specifying our contract details:
+<img src="https://github.com/algorealmInc/Triggr/blob/main/public/triggr-shot-1.png">
+4. After that, we then define triggers to execute when our events are emitted:
 
 This triggr writes to the database when the `ValueChanged` event is emitted. We can see that the events defined in the contract automatically appears in the console to be used for trigger login in `main`.
-1. We then navigate to the [contracts UI](https://ui.use.ink/contract/0x25b322C78C16E0A20DCebECAAef82A0a2976624b) and call the `increment` function so that the `ValueChanged` event can be emitted. (Ensure you have a PAS balance to call the contract.)
-1. We then go to check our database and see that storage has been modified automatically after event emitted and trigger fired.
-1. Viola! The database hab been updated due to our onchain events which in turn then notified the front-end, through the triggr `SDK`.
+5. We then navigate to the [contracts UI](https://ui.use.ink/contract/0x25b322C78C16E0A20DCebECAAef82A0a2976624b) and call the `increment` function so that the `ValueChanged` event can be emitted. (Ensure you have a PAS balance to call the contract.)
+6. We then go to check our database and see that storage has been modified automatically after event emitted and trigger fired.
+7. Viola! The database has been updated due to our onchain event which in turn then notified the front-end, through the triggr `SDK`. No hassle, no stress. Pure magic!
 
 It is as simple and magical as that.
 
