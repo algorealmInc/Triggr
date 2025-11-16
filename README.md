@@ -196,12 +196,12 @@ fn main(event) {
 1. A trigger must always be in a `main` function.
 1. You cannot write more that one triggers at a time, except branching it out by using a conditional.
 
-### Triggr SDK
+## Triggr SDK
 Triggr SDK allows applications to easily send queries and react to state changes on Triggr (propelled directly by onchain events). The SDK is published on [npm](https://www.npmjs.com/package/triggr-ts-sdk) and is explained in detail [here](https://github.com/algorealmInc/Triggr/tree/main/sdk).
 
-### Example
+## Example
 
-### Why Should Anyone Care?
+## Why Should Anyone Care?
 
 - Build reactive applications without polling
 - Simplify backend logic dramatically
@@ -211,13 +211,13 @@ Triggr SDK allows applications to easily send queries and react to state changes
 - Fast rule execution with predictable performance
 - Designed for developers who want **power without complexity**
 
-### Improvements and next steps 
+## Improvements and next steps 
 1. The SCALE-decoding is not perfect. We will improve and perfect the scale decoding of event data so all contracts event can be parsed.
 1. Triggr runs on a single centralized node. We will make it decentralized and synchronize the nodes using [SwarmNL].
 1. We will make Triggr more generic to accomodate more chains e.g Ethereum
 1. Make triggers more generic, powerful and capable e.g integration with telegram.
 
-### Conclusion
+## Conclusion
 Triggr is an incredibly useful platform that can speed up and simplify Web3 application developments. You can easily build real-time apps and worry only about your business logic and contract logic. Congratulations!
 
 Web3 developers can have nice things 😊
