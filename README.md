@@ -109,7 +109,7 @@ fn main(events) {
     ValueChanged { from, value, message }  
 ]
 
-fn main(event) {
+fn main(events) {
     if (events.ValueChanged.value > 200) {
         delete @users:tx1
     }
@@ -131,7 +131,7 @@ Below are the four major patterns of writing triggers:
     NftMinted { total_supply, amount }
 ]
 
-fn main(event) {
+fn main(events) {
     if (event.NftMinted.total_supply > 20000) {
         update @collection:doc_id {
             category: "high"
@@ -148,7 +148,7 @@ fn main(event) {
     NftMinted { total_supply, amount }
 ]
 
-fn main(event) {
+fn main(events) {
     /* Record NFT minting always */
     insert @collection:doc_id {
         total_supply: events.NftMinted.total_supply,
@@ -165,7 +165,7 @@ fn main(event) {
     NftMinted { total_supply, amount }
 ]
 
-fn main(event) {
+fn main(events) {
     /* Record NFT minting always */
     insert @collection: {
         total_supply: events.NftMinted.total_supply,
@@ -182,7 +182,7 @@ fn main(event) {
     NftMinted { total_supply, amount }
 ]
 
-fn main(event) {
+fn main(events) {
     /* Record NFT minting always */
     insert @collection:doc_id {
         total_supply: events.NftMinted.total_supply,
@@ -213,6 +213,24 @@ Here is how it works in detail:
 4. After that, we then define triggers to execute when our events are emitted. This trigger writes to the database when the `ValueChanged` event is emitted. We can see that the events defined in the contract automatically appears in the console to be used for trigger logic in `main`.
 
 <img src="https://github.com/algorealmInc/Triggr/blob/main/public/triggr-shot-2.png">
+
+Here is the triggr defined:
+```rust
+/* Events defined in your contract */
+  const events = [
+    ValueChanged { from, value, message }  
+]
+
+fn main(events) {
+    /* Insert into the transactions collections and generate ID */
+    insert @collection: with {
+        from: events.ValueChanged.from,
+        value: events.ValueChanged.value,
+        message: events.ValueChanged.message
+    }
+}
+
+```
 
 5. We then navigate to the [contracts UI](https://ui.use.ink/contract/0x25b322C78C16E0A20DCebECAAef82A0a2976624b) and call the `increment` function so that the `ValueChanged` event can be emitted. (Ensure you have a PAS balance to call the contract.)
 
