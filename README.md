@@ -1,5 +1,5 @@
 
-<img src="https://github.com/algorealmInc/Triggr/blob/main/public/logo.png">
+<img src="https://github.com/algorealmInc/Triggr/blob/main/public/logo.png" style="max-height: 200px">
 
 # ⚡️ Triggr - A Reactive Backend For Building Real-time Dapps.
 
