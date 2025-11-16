@@ -14,7 +14,7 @@ const Index = () => {
   useEffect(() => {
     // Initialize a triggr client
     const client = new TriggrSDK({
-      apiKey: "GHrIf4iZULmhN3_6RzrFJrSab9NfsFAAGiuYSecfRFs",
+      apiKey: "Scit-1vK9yaVzFcWcpbnx6-xxcqWwoT6DAH8Qpc_nw4",
     });
 
     // Connect
@@ -25,7 +25,7 @@ const Index = () => {
       setIsConnected(true);
   
       // Subscribe to "transfers" collection
-      client.onCollectionChange("transfers", (payload: any) => {
+      client.onCollectionChange("transactions", (payload: any) => {
         const event = payload.data;
   
         // Add event to list

@@ -214,7 +214,7 @@ Here is how it works in detail:
 
 <img src="https://github.com/algorealmInc/Triggr/blob/main/public/triggr-shot-2.png">
 
-Here is the triggr defined:
+Here is the deployed trigger:
 ```rust
 /* Events defined in your contract */
   const events = [
@@ -267,6 +267,6 @@ It is as simple and magical as that.
 ## Conclusion
 Triggr is an incredibly useful platform that can speed up and simplify Web3 application developments. You can now easily build real-time apps and worry only about your business and contract logic. Congratulations!
 
-Web3 developers can have nice things 😊
+Web3 developers can have nice things 😊.
 
 Copyright (c) 2025 Algorealm, Inc.
