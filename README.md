@@ -157,7 +157,7 @@ fn main(event) {
 ```
 ---
 
-3. Dynamic ID i.e letting Triggr assign the ID automatically. This is done by leaving out the `document id` after the `:`. Triggr understands this and will generate a `UUID` as the key for the record internally.
+3. Dynamic ID i.e letting Triggr assign the ID automatically. This is done by leaving out the `document id` after the colon `:`. Triggr understands this and will generate a `UUID` as the key for the record internally.
 
 ```rust
 /* Events defined in your contract */
@@ -195,8 +195,6 @@ fn main(event) {
 #### Rules for writing Triggers
 1. A trigger must always be in a `main` function.
 1. You cannot write more that one triggers at a time, except branching it out by using a conditional.
-
----
 
 ### Triggr SDK
 Triggr SDK allows applications to easily send queries and react to state changes on Triggr (propelled directly by onchain events). The SDK is published on [npm](https://www.npmjs.com/package/triggr-ts-sdk) and is explained in detail [here](https://github.com/algorealmInc/Triggr/tree/main/sdk).
