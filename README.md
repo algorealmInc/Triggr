@@ -35,6 +35,7 @@ Triggr consists on majorly 4 parts working together:
 
 
 ### Diagram
+<img src="https://github.com/algorealmInc/Triggr/blob/main/public/triggr-arch.png">
 
 ### Technologies
 - Rust i.e `scale-info`, `substrate-api-client`, `parity-scale-code`, `axum`, `sled` etc.
