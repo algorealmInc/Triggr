@@ -38,6 +38,7 @@ Triggr consists on majorly 4 parts working together:
 - Rust i.e `scale-info`, `substrate-api-client`, `parity-scale-code`, `axum`, `sled` etc.
 - React/Typescript for the UI.
 - Contracts.json
+- Clerk Auth (Dev) for console auth.
 
 
 ## Triggers
@@ -118,7 +119,6 @@ fn main(event) {
 Triggers watch out for events that match their condition and execute the rules that was set e.g deleting a record.
 Below are the four major patterns of writing triggers:
 
----
 
 1. Using a Conditional i.e reacting to events with a condition:
 
@@ -137,8 +137,6 @@ fn main(event) {
 }   
 ```
 
----
-
 2. No Conditionals i.e simple triggers without conditions, these are executed any time any event is emitted from your contract:
 
 ```rust
@@ -155,7 +153,6 @@ fn main(event) {
     }
 }  
 ```
----
 
 3. Dynamic ID i.e letting Triggr assign the ID automatically. This is done by leaving out the `document id` after the colon `:`. Triggr understands this and will generate a `UUID` as the key for the record internally.
 
@@ -173,9 +170,8 @@ fn main(event) {
     }
 }  
 ```
----
 
-4. Writing Event data directly into the database. Triggr is able to understand when real-time event data need to be stored:
+4. Writing Event data directly into the database. Triggr is able to understand when real-time event data need to be stored. Here it is important to make sure the write event is specified correctly as typographical error would prevent the triggers from being fired:
 
 ```rust
 /* Events defined in your contract */
@@ -200,6 +196,22 @@ fn main(event) {
 Triggr SDK allows applications to easily send queries and react to state changes on Triggr (propelled directly by onchain events). The SDK is published on [npm](https://www.npmjs.com/package/triggr-ts-sdk) and is explained in detail [here](https://github.com/algorealmInc/Triggr/tree/main/sdk).
 
 ## Example
+The Demo examples showcases the power and potential of Triggr. In Demo, we have a dummy contract that emits events. When these events are emitted, we see that the triggers written in response to the events spring into action immediately and modify database state, which notifies the front-end in real-time. So when a event is generated, here is the passage or flow of data:
+
+Contract Events -> Triggers -> Database Changes -> Front-end update.
+
+Here is it works in detail:
+1. We define our ink! contract to emit event due to state changes in our contract storage. [Here](https://github.com/algorealmInc/Triggr/blob/main/examples/demo/contract/lib.rs) is our contracts file.
+1. We then deploy the demo contract to Passethub with contract address `0x25b322C78C16E0A20DCebECAAef82A0a2976624b`. To interact with the contract and see the demo work in real time, submit extrinsics here on the [contracts UI](https://ui.use.ink/contract/0x25b322C78C16E0A20DCebECAAef82A0a2976624b).
+1. Then we create a project on Triggr, specifying our contract details:
+1. After that, we then define triggers to execute when our events are emitted:
+
+This triggr writes to the database when the `ValueChanged` event is emitted. We can see that the events defined in the contract automatically appears in the console to be used for trigger login in `main`.
+1. We then navigate to the [contracts UI](https://ui.use.ink/contract/0x25b322C78C16E0A20DCebECAAef82A0a2976624b) and call the `increment` function so that the `ValueChanged` event can be emitted. (Ensure you have a PAS balance to call the contract.)
+1. We then go to check our database and see that storage has been modified automatically after event emitted and trigger fired.
+1. Viola! The database hab been updated due to our onchain events which in turn then notified the front-end, through the triggr `SDK`.
+
+It is as simple and magical as that.
 
 ## Why Should Anyone Care?
 
@@ -212,12 +224,14 @@ Triggr SDK allows applications to easily send queries and react to state changes
 - Designed for developers who want **power without complexity**
 
 ## Improvements and next steps 
-1. The SCALE-decoding is not perfect. We will improve and perfect the scale decoding of event data so all contracts event can be parsed.
+1. The SCALE-decoding is not perfect. We will improve and perfect the scale decoding of event data so all contracts event can be parsed and decoded without errors .
 1. Triggr runs on a single centralized node. We will make it decentralized and synchronize the nodes using [SwarmNL].
-1. We will make Triggr more generic to accomodate more chains e.g Ethereum
-1. Make triggers more generic, powerful and capable e.g integration with telegram.
+1. We will make Triggr more generic to accomodate more chains e.g Ethereum.
+1. Make triggers more generic, powerful and capable e.g integration with telegram, modification of front-end directly.
 
 ## Conclusion
-Triggr is an incredibly useful platform that can speed up and simplify Web3 application developments. You can easily build real-time apps and worry only about your business logic and contract logic. Congratulations!
+Triggr is an incredibly useful platform that can speed up and simplify Web3 application developments. You can now easily build real-time apps and worry only about your business and contract logic. Congratulations!
 
 Web3 developers can have nice things 😊
+
+Copyright (c) Algorealm, Inc.
