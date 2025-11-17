@@ -124,6 +124,23 @@ function tokenizeDSL(text: string): Array<{ type: string; value: string }> {
       continue;
     }
 
+    // All brackets - special handling
+    if (
+      text[i] === "{" ||
+      text[i] === "}" ||
+      text[i] === "[" ||
+      text[i] === "]" ||
+      text[i] === "(" ||
+      text[i] === ")"
+    ) {
+      tokens.push({
+        type: "bracket",
+        value: text[i],
+      });
+      i++;
+      continue;
+    }
+
     // Single character tokens
     tokens.push({
       type: "operator",
@@ -186,6 +203,9 @@ function renderHighlightedCode(text: string): React.ReactNode[] {
         break;
       case "number":
         className = "syntax-number";
+        break;
+      case "bracket":
+        className = "syntax-bracket";
         break;
       case "operator":
         className = "syntax-operator";

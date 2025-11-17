@@ -1,4 +1,11 @@
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -40,7 +47,7 @@ export function ViewRuleModal({
             <div className="flex-1">
               <div className="flex items-center space-x-2">
                 <DialogTitle>{rule.name}</DialogTitle>
-                <Badge 
+                <Badge
                   variant={rule.status === "active" ? "default" : "secondary"}
                   className={rule.status === "active" ? "bg-success" : ""}
                 >
@@ -54,7 +61,7 @@ export function ViewRuleModal({
           </div>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto overflow-x-hidden">
           {/* Metadata */}
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
@@ -77,7 +84,8 @@ export function ViewRuleModal({
               <div>
                 <span className="text-muted-foreground">Target:</span>
                 <p className="mt-1 text-primary">
-                  {rule.targetCollection}{rule.targetDocument ? `/${rule.targetDocument}` : ""}
+                  {rule.targetCollection}
+                  {rule.targetDocument ? `/${rule.targetDocument}` : ""}
                 </p>
               </div>
             )}
@@ -86,13 +94,11 @@ export function ViewRuleModal({
           {/* Code */}
           <div className="space-y-2">
             <span className="text-sm text-muted-foreground">Rule Code:</span>
-            <ScrollArea className="max-h-[400px]">
-              <div className="bg-console-bg border border-console-border rounded-lg p-4 font-mono text-sm">
-                <pre className="text-foreground overflow-x-auto">
-                  {rule.code}
-                </pre>
-              </div>
-            </ScrollArea>
+            <div className="max-h-[400px] w-full border border-console-border rounded-lg bg-console-bg overflow-auto">
+              <pre className="p-4 font-mono text-sm whitespace-pre text-foreground">
+                {rule.code}
+              </pre>
+            </div>
           </div>
         </div>
 
