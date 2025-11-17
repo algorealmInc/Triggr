@@ -14,7 +14,7 @@ const Index = () => {
   useEffect(() => {
     // Initialize a triggr client
     const client = new TriggrSDK({
-      apiKey: "Scit-1vK9yaVzFcWcpbnx6-xxcqWwoT6DAH8Qpc_nw4",
+      apiKey: "oK4ZO_fn5Zxn295EnA1zQx4Nxw8ZJHtQDsmouluUi6c",
     });
 
     // Connect
@@ -26,13 +26,19 @@ const Index = () => {
   
       // Subscribe to "transfers" collection
       client.onCollectionChange("transactions", (payload: any) => {
-        const event = payload.data;
+        let event = payload.data;
+
+        // Add id and date
+        event.id = payload.id;
+        event.timestamp = new Date();
   
         // Add event to list
         setEvents((prev) => {
           const next = [event, ...prev].slice(0, 50);
           return next;
         });
+
+        console.log(events)
   
         // Update total value based on event.amount
         setTotalValue(event.amount);
