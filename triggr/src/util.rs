@@ -206,6 +206,12 @@ pub fn strip_wrappers(value: &str) -> &str {
     result.trim()
 }
 
+/// Generate random UUID
 pub fn generate_uuid() -> String {
     Uuid::new_v4().to_string()
+}
+
+/// Check if a string is a UUID
+pub fn is_uuid(input: &str) -> bool {
+    Uuid::parse_str(input).is_ok()
 }

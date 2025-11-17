@@ -24,7 +24,7 @@ use super::{
 /// Max uploadable file size
 const MAX_FILE_SIZE: usize = 10 * 1024 * 1024; // 10MB
 
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize, ToSchema, Default)]
 pub struct CreateProjectResponse {
     pub message: String,
     pub project: Project,

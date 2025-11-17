@@ -1,6 +1,6 @@
 {
   "source": {
-    "hash": "0xb52a53e87cd89e7e1c8ecfd32154994aaf844238b4e24c574a01b3c1652884ec",
+    "hash": "0x94381bf87955565ca43cc88570abc6793013829909103199063a353424344e97",
     "language": "ink! 6.0.0-alpha.4",
     "compiler": "rustc 1.90.0",
     "build_info": {
@@ -10,10 +10,10 @@
     }
   },
   "contract": {
-    "name": "demo",
+    "name": "event_demo",
     "version": "0.1.0",
     "authors": [
-      "[your_name] <[your_user_id]>"
+      "[your_name] <[your_email]>"
     ]
   },
   "image": null,
@@ -31,7 +31,7 @@
       "id": 1,
       "type": {
         "path": [
-          "demo",
+          "event_demo",
           "event_demo",
           "EventDemo"
         ],
@@ -343,7 +343,13 @@
           ]
         },
         "docs": [
-          "Constructor — initializes the counter to zero."
+          "--------------------------------------------------------------",
+          "CONSTRUCTOR",
+          "--------------------------------------------------------------",
+          "",
+          "Initializes the counter to zero.",
+          "Good starting state for event testing.",
+          ""
         ],
         "default": false
       }
@@ -373,7 +379,22 @@
           ]
         },
         "docs": [
-          " Increments the counter by a given amount and emits an event."
+          " --------------------------------------------------------------",
+          " increment(by)",
+          " --------------------------------------------------------------",
+          "",
+          " Increments the counter and emits a `ValueChanged` event.",
+          "",
+          " Usage (from UI):",
+          "    contract.increment(5)",
+          "",
+          " Triggr will receive an event like:",
+          "",
+          "   event: \"ValueChanged\"",
+          "   from: <caller>",
+          "   value: <new counter>",
+          "   message: \"Counter increased by X\"",
+          ""
         ],
         "default": false
       },
@@ -410,7 +431,30 @@
           ]
         },
         "docs": [
-          " Emits an arbitrary event with a message and number — for testing."
+          " --------------------------------------------------------------",
+          " emit_custom(text, number)",
+          " --------------------------------------------------------------",
+          "",
+          " This is the **main Triggr demo method**.",
+          "",
+          " Allows UI or script to intentionally fire arbitrary events.",
+          " Perfect for testing:",
+          "",
+          " - webhook triggers",
+          " - conditional rules",
+          " - action chains",
+          " - data capture / logging",
+          "",
+          " Example:",
+          "",
+          "    contract.emit_custom(\"hi triggr\", 777)",
+          "",
+          " Triggr receives:",
+          "",
+          "   from: <caller>",
+          "   value: 777",
+          "   message: \"hi triggr\"",
+          ""
         ],
         "default": false
       },
@@ -427,16 +471,14 @@
             "MessageResult"
           ]
         },
-        "docs": [
-          " View function to read the counter."
-        ],
+        "docs": [],
         "default": false
       }
     ],
     "events": [
       {
         "label": "ValueChanged",
-        "module_path": "demo::event_demo",
+        "module_path": "event_demo::event_demo",
         "signature_topic": "0xd7cbcb27c7dc2301de78d251c8ceb1e252c33300e07e971c420e48d193c09f47",
         "args": [
           {
@@ -448,7 +490,10 @@
                 "Option"
               ]
             },
-            "docs": []
+            "docs": [
+              "Address of the account who caused the event.",
+              "Indexed so Triggr can filter by user quickly."
+            ]
           },
           {
             "label": "value",
@@ -459,7 +504,10 @@
                 "u128"
               ]
             },
-            "docs": []
+            "docs": [
+              "A numerical value associated with the event.",
+              "Also indexed — easy to query."
+            ]
           },
           {
             "label": "message",
@@ -470,11 +518,25 @@
                 "String"
               ]
             },
-            "docs": []
+            "docs": [
+              "A free-text message — useful for logs, notifications, webhooks, etc."
+            ]
           }
         ],
         "docs": [
-          "The event emitted whenever a value is updated or logged."
+          "--------------------------------------------------------------",
+          "EVENT STRUCT",
+          "--------------------------------------------------------------",
+          "",
+          "ValueChanged — emitted whenever the contract wants to notify Triggr.",
+          "",
+          "Triggr listens to all events → decodes → triggers automation rules.",
+          "",
+          "Fields:",
+          "- `from`: Indexed. Helps identify the caller quickly without decoding payload.",
+          "- `value`: Indexed. Helps Triggr filter rules like `value > 100` efficiently.",
+          "- `message`: Non-indexed. Placed in event payload for full decoding.",
+          ""
         ]
       }
     ],

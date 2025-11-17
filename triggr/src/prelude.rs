@@ -296,7 +296,7 @@ pub struct WsPayload {
 }
 
 /// Represents a database project on the network.
-#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, ToSchema)]
 pub struct Project {
     /// Project id
     pub id: String,
